@@ -424,19 +424,19 @@ with k3:
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
-# ===== 라인별 분포 카드 스타일 =====
+# ===== 라인별 분포 카드 스타일 (전체 요약 카드와 동일 톤) =====
 st.markdown("""
 <style>
 /* 마커가 포함된 컨테이너 = 라인별 분포 카드 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) {
-    background-color: #1C1F26 !important;
-    border: 1px solid #2A2E37 !important;
+    background-color: #0E1117 !important;   /* ← 전체 요약과 동일 (Streamlit 기본 배경) */
+    border: 1px solid #262730 !important;   /* ← 얇은 다크 보더 */
     border-radius: 10px !important;
     padding: 20px 25px !important;
     min-height: 560px;
 }
 
-/* 카드 내부의 컬럼 wrapper 배경은 투명 처리 (미니 도넛 개별 박스 제거) */
+/* 카드 내부의 컬럼 wrapper 배경은 투명 처리 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) 
     div[data-testid="stVerticalBlockBorderWrapper"] {
     background-color: transparent !important;
@@ -446,6 +446,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-ca
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 col_left, col_right = st.columns(2)
 
