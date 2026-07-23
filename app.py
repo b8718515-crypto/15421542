@@ -426,6 +426,65 @@ st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_
 
 col_left, col_right = st.columns([1.3, 1.7])
 
+with col_left:
+    # 왼쪽 카드도 오른쪽과 동일한 스타일로 통일
+    st.markdown("""
+    <style>
+    /* '라인별 알람 분포' 카드에만 적용 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-dist-card-marker) {
+        background-color: #2A2E37 !important;
+        border: 1px solid #3A3F4B !important;
+        border-radius: 10px !important;
+        padding: 15px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    with st.container(border=True):
+        # 카드 식별용 마커 + 제목 (오른쪽 카드와 동일한 스타일)
+        st.markdown(
+            "<div class='line-dist-card-marker' "
+            "style='color:#FAFAFA; font-size:15px; font-weight:700; margin-bottom:10px;'>"
+            "라인별 알람 분포</div>",
+            unsafe_allow_html=True
+        )
+
+        # ===== 기존 도넛 차트 코드 =====
+        line_dist = df_valid.groupby("라인").size().reset_index(name="건수")
+        line_dist["라인_라벨"] = line_dist["라인"].map(LINE_LABELS)
+        line_dist["색상"] = line_dist["라인"].map(LINE_COLORS)
+
+        fig_dist = go.Figure(go.Pie(
+            labels=line_dist["라인_라벨"],
+            values=line_dist["건수"],
+            hole=0.55,
+            marker=dict(colors=line_dist["색상"].tolist()),
+            textinfo="label+percent",
+            textposition="inside",
+            textfont=dict(size=12, color="white"),
+            sort=True,
+            direction="clockwise",
+        ))
+        fig_dist.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=400,                         # ← 오른쪽 카드와 균형 맞추기 위해 조정
+            margin=dict(l=10, r=10, t=10, b=10),  # ← 여백 축소 (제목이 카드 안에 있으므로)
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle", y=0.5,
+                xanchor="left", x=1.05,
+                font=dict(color="white", size=12),
+            ),
+            annotations=[dict(
+                text=f"<b>{line_dist['건수'].sum():,}</b><br><span style='font-size:12px;color:#8B92A0;'>전체</span>",
+                font=dict(size=22, color="white"),
+                showarrow=False,
+                x=0.5, y=0.5,
+            )],
+        )
+        st.plotly_chart(fig_dist, use_container_width=True, key="line_dist_donut")
 
 
 with col_right:
