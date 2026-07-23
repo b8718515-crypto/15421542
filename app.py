@@ -437,16 +437,15 @@ unresolved = df["해제시간"].isna().sum()
 
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    render_kpi_card("전체 알람", f"{len(df_valid):,} 건", "총 발생 알람", "cyan")
+    render_kpi_card("전체 알람", f"{len(df_valid):,} 건", "", "cyan")
 with k2:
-    render_kpi_card("고유 알람", f"{df_valid['알람명'].nunique():,} 종", "알람 종류 수", "green")
+    render_kpi_card("고유 알람", f"{df_valid['알람명'].nunique():,} 종", "", "green")
 with k3:
-    render_kpi_card("누적 지속시간", seconds_to_hm(total_sec), "전체 누적 시간", "yellow")
+    render_kpi_card("누적 지속시간", seconds_to_hm(total_sec), "", "yellow")
 with k4:
-    render_kpi_card("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean()), "건당 평균", "orange")
+    render_kpi_card("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean()), "", "orange")
 with k5:
-    render_kpi_card("활성 라인", f"{df_valid['라인'].nunique()} 개", "가동 중 라인 수", "purple")
-
+    render_kpi_card("활성 라인", f"{df_valid['라인'].nunique()} 개", "", "purple")
 
 
 # =========================================================
@@ -544,12 +543,13 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 
     sec_sum = data["지속시간_초"].sum()
     a, b, c = st.columns(3)
-    with a:
-        render_kpi_card("ALARMS", f"{len(data):,}", "알람 건수", "cyan")
-    with b:
-        render_kpi_card("UNIQUE", f"{data['알람명'].nunique():,}", "고유 알람", "green")
-    with c:
-        render_kpi_card("DURATION", seconds_to_hm(sec_sum), "누적 지속시간", "yellow")
+with a:
+    render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
+with b:
+    render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
+with c:
+    render_kpi_card("누적 지속시간", seconds_to_hm(sec_sum), "", "yellow")
+
 
     st.markdown(f"#### 🏆 {title} - TOP {top_n}")
     st.dataframe(
