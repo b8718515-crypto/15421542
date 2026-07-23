@@ -55,10 +55,11 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
     다양한 형식을 순차적으로 시도하여 datetime으로 변환.
     - datetime 객체는 그대로
     - 엑셀 시리얼 숫자 (예: 45632.354)
-    - 표준 문자열 (자동 파싱)
-    - '2024-11-15 08:23:41', '2024/11/15 8:23', 
-      '241115 082341', '2024년 11월 15일 08:23:41' 등
+    - 한글 '오전/오후' 표기 지원 (예: '2026-07-22 오후 10:39:52')
+    - 표준 문자열 자동 파싱
     """
+    import re
+
     # 이미 datetime 계열이면 그대로
     if pd.api.types.is_datetime64_any_dtype(series):
         return series
@@ -66,14 +67,14 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
     # 1) 숫자형 → 엑셀 시리얼 날짜로 해석 시도
     if pd.api.types.is_numeric_dtype(series):
         try:
-            # 엑셀 기준: 1899-12-30 + n일
             return pd.to_datetime(series, unit="D", origin="1899-12-30", errors="coerce")
         except Exception:
             pass
 
-    # 2) 문자열로 캐스팅 후 정리
+    # 2) 문자열 캐스팅
     s = series.astype(str).str.strip()
-    # 한글 날짜 표기 제거/치환
+
+    # 3) 한글 날짜 표기 정리
     s = (
         s.str.replace("년", "-", regex=False)
          .str.replace("월", "-", regex=False)
@@ -81,17 +82,40 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
          .str.replace("시", ":", regex=False)
          .str.replace("분", ":", regex=False)
          .str.replace("초", "",  regex=False)
-         .str.replace(".", "-", regex=False)  # 2024.11.15 → 2024-11-15
-         .str.strip()
-         .str.rstrip(":")
     )
 
-    # 3) 일반 파싱 (자동 추론)
+    # 4) 🔥 오전/오후 처리 (핵심)
+    # "2026-07-22 오후 10:39:52" → hour + 12 (단, 12시는 그대로)
+    # "2026-07-22 오전 10:39:52" → hour 그대로 (단, 12시는 0시로)
+    def convert_ampm(text: str) -> str:
+        if not isinstance(text, str):
+            return text
+        # "오전"/"오후" 뒤의 시:분:초 추출
+        m = re.search(r"(오전|오후)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?", text)
+        if not m:
+            return text
+        ampm, hh, mm, ss = m.group(1), int(m.group(2)), m.group(3), m.group(4) or "00"
+        if ampm == "오후" and hh != 12:
+            hh += 12
+        elif ampm == "오전" and hh == 12:
+            hh = 0
+        new_time = f"{hh:02d}:{mm}:{ss}"
+        # 원본에서 "오전/오후 HH:MM(:SS)" 부분을 24시간제로 치환
+        return re.sub(r"(오전|오후)\s*\d{1,2}:\d{2}(?::\d{2})?", new_time, text)
+
+    s = s.map(convert_ampm)
+
+    # 5) 점(.) → 하이픈 (2024.11.15 대응)
+    s = s.str.replace(".", "-", regex=False).str.strip()
+    s = s.str.replace(r"\s+", " ", regex=True)  # 다중 공백 정리
+    s = s.str.rstrip(":-")
+
+    # 6) 자동 파싱
     out = pd.to_datetime(s, errors="coerce")
     if out.notna().sum() > 0:
         return out
 
-    # 4) 흔한 포맷 순차 시도
+    # 7) 흔한 포맷 순차 시도
     fmts = [
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
@@ -99,17 +123,12 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
         "%Y/%m/%d %H:%M",
         "%Y%m%d %H%M%S",
         "%Y%m%d%H%M%S",
-        "%y%m%d %H%M%S",
-        "%y-%m-%d %H:%M:%S",
-        "%m/%d/%Y %H:%M:%S",
-        "%d/%m/%Y %H:%M:%S",
     ]
     for f in fmts:
         out = pd.to_datetime(s, format=f, errors="coerce")
         if out.notna().sum() > 0:
             return out
 
-    # 모두 실패 → NaT
     return pd.to_datetime(pd.Series([None] * len(s)), errors="coerce")
 
 
