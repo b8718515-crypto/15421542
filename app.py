@@ -534,8 +534,8 @@ with col_right:
                     rotation=0,
                 ))
                 fig.update_layout(
-    paper_bgcolor="#1A1D26",   # ← 카드 배경과 동일한 회색 ⭐
-    plot_bgcolor="#1A1D26",    # ← 카드 배경과 동일한 회색 ⭐
+    paper_bgcolor="#0E1117",   # ← 카드 배경과 동일한 회색 ⭐
+    plot_bgcolor="#0E1117",    # ← 카드 배경과 동일한 회색 ⭐
                     height=200,
                     margin=dict(l=5, r=5, t=20, b=5),
                     annotations=[dict(
