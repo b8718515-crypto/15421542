@@ -44,7 +44,7 @@ st.markdown("""
     }
     
     .kpi-card {
-        background-color: #1C1F26;
+        background-color: #8B92A0;
         padding: 20px;
         border-radius: 10px;
         border-left: 3px solid #00E5FF;
@@ -80,7 +80,7 @@ st.markdown("""
     
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
-        background-color: #1C1F26;
+        background-color: #8B92A0;
         padding: 5px;
         border-radius: 8px;
     }
