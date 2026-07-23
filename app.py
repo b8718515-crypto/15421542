@@ -22,7 +22,7 @@ st.set_page_config(
 # =========================================================
 st.markdown("""
 <style>
-    .stApp { background-color: #1A1D26; }
+    .stApp { background-color: #0E1117; }
     
     .dashboard-header {
         background: linear-gradient(90deg, #1C1F26 0%, #1A1D26 100%);
