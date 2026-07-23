@@ -447,13 +447,13 @@ with col_left:
     st.plotly_chart(fig, use_container_width=True)
 
 with col_right:
-    # 오른쪽 카드 배경을 왼쪽과 동일한 톤으로 지정하는 CSS
+    # 오른쪽 카드 배경을 왼쪽 카드와 동일한 밝은 회색 톤으로 지정
     st.markdown("""
     <style>
-    /* '라인별 비율' 카드에만 적용되도록 고유 클래스 사용 */
+    /* '라인별 비율' 카드에만 적용 */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
-        background-color: #1C1F26 !important;
-        border: 1px solid #2A2E37 !important;
+        background-color: #2A2E37 !important;   /* ← 왼쪽 카드와 동일 톤 */
+        border: 1px solid #3A3F4B !important;
         border-radius: 10px !important;
         padding: 15px !important;
     }
@@ -470,7 +470,6 @@ with col_right:
         )
 
         line_summary = df_valid.groupby("라인").size().reset_index(name="건수")
-        # 라인 순서 고정 (4A → 4B → 4C → 4X)
         line_order = ["4A", "4B", "4C", "4X"]
         line_summary["_order"] = line_summary["라인"].map({v: i for i, v in enumerate(line_order)})
         line_summary = line_summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
@@ -486,7 +485,7 @@ with col_right:
                 fig = go.Figure(go.Pie(
                     values=[pct, 100 - pct],
                     hole=0.72,
-                    marker=dict(colors=[color, "#2A2E37"]),
+                    marker=dict(colors=[color, "#1C1F26"]),  # ← 도넛 배경 링 색을 살짝 어둡게 (대비↑)
                     showlegend=False,
                     textinfo="none",
                     sort=False,
@@ -494,7 +493,7 @@ with col_right:
                     rotation=0,
                 ))
                 fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",   # 도넛 뒤 네모 없음 유지
+                    paper_bgcolor="rgba(0,0,0,0)",   # 투명 유지 → 카드 배경이 그대로 비침
                     plot_bgcolor="rgba(0,0,0,0)",
                     height=180,
                     margin=dict(l=5, r=5, t=10, b=5),
@@ -512,6 +511,7 @@ with col_right:
                     f"</center>",
                     unsafe_allow_html=True
                 )
+
 
 
 
