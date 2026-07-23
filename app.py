@@ -426,25 +426,7 @@ st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_
 
 col_left, col_right = st.columns([1.3, 1.7])
 
-with col_left:
-    line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
-    line_counts["라인표시"] = line_counts["라인"].map(LINE_LABELS)
-    
-    fig = go.Figure(go.Pie(
-        labels=line_counts["라인표시"],
-        values=line_counts["건수"],
-        hole=0.6,
-        marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
-        textinfo="label+percent",
-        textfont=dict(color="white", size=11),
-    ))
-    fig.update_layout(
-        title="라인별 알람 분포",
-        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
-                          font=dict(size=20, color="white"), showarrow=False)]
-    )
-    apply_dark_theme(fig, height=380)
-    st.plotly_chart(fig, use_container_width=True)
+
 
 with col_right:
     # 오른쪽 카드 배경을 왼쪽 카드와 동일한 밝은 회색 톤으로 지정
