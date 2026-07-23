@@ -22,10 +22,10 @@ st.set_page_config(
 # =========================================================
 st.markdown("""
 <style>
-    .stApp { background-color: #0E1117; }
+    .stApp { background-color: #1A1D26; }
     
     .dashboard-header {
-        background: linear-gradient(90deg, #1C1F26 0%, #0E1117 100%);
+        background: linear-gradient(90deg, #1C1F26 0%, #1A1D26 100%);
         padding: 20px 30px;
         border-radius: 10px;
         border-left: 4px solid #00E5FF;
@@ -92,7 +92,7 @@ st.markdown("""
     }
     .stTabs [aria-selected="true"] {
         background-color: #00E5FF !important;
-        color: #0E1117 !important;
+        color: #1A1D26 !important;
         font-weight: 700;
     }
     
