@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 
 
 # =========================================================
@@ -13,20 +14,154 @@ st.set_page_config(
     page_title="알람 분석 대시보드",
     page_icon="🚨",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-st.title("🚨 알람 발생 이력 분석 대시보드")
-st.caption("라인별(4A/4B/4C/4X) TOP · 전체 TOP · 누적지속시간(시간+분) · 종합점수 기반 분석")
+# =========================================================
+# 🎨 커스텀 CSS (다크 테마 + 청록 액센트)
+# =========================================================
+st.markdown("""
+<style>
+    /* 전체 배경 */
+    .stApp {
+        background-color: #0E1117;
+    }
+    
+    /* 타이틀 영역 */
+    .dashboard-header {
+        background: linear-gradient(90deg, #1C1F26 0%, #0E1117 100%);
+        padding: 20px 30px;
+        border-radius: 10px;
+        border-left: 4px solid #00E5FF;
+        margin-bottom: 20px;
+    }
+    .dashboard-title {
+        color: #FAFAFA;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .dashboard-subtitle {
+        color: #8B92A0;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+    
+    /* KPI 카드 */
+    .kpi-card {
+        background-color: #1C1F26;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 3px solid #00E5FF;
+        height: 110px;
+    }
+    .kpi-card-orange { border-left-color: #FF6B35; }
+    .kpi-card-green  { border-left-color: #00E676; }
+    .kpi-card-yellow { border-left-color: #FFD600; }
+    .kpi-card-purple { border-left-color: #B388FF; }
+    
+    .kpi-label {
+        color: #8B92A0;
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+    }
+    .kpi-value {
+        color: #FAFAFA;
+        font-size: 28px;
+        font-weight: 700;
+        margin-top: 8px;
+    }
+    .kpi-sub {
+        color: #6B7280;
+        font-size: 11px;
+        margin-top: 4px;
+    }
+    
+    /* 섹션 헤더 */
+    .section-header {
+        color: #8B92A0;
+        font-size: 12px;
+        letter-spacing: 2px;
+        font-weight: 600;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+    
+    /* 탭 스타일 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        background-color: #1C1F26;
+        padding: 5px;
+        border-radius: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        color: #8B92A0;
+        border-radius: 6px;
+        padding: 8px 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #00E5FF !important;
+        color: #0E1117 !important;
+        font-weight: 700;
+    }
+    
+    /* 데이터프레임 */
+    .stDataFrame {
+        background-color: #1C1F26;
+        border-radius: 8px;
+    }
+    
+    /* 구분선 숨김 */
+    hr { border-color: #2A2E37; }
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================================
+# 대시보드 헤더
+# =========================================================
+st.markdown("""
+<div class="dashboard-header">
+    <div class="dashboard-title">🚨 알람 발생 이력 분석 대시보드</div>
+    <div class="dashboard-subtitle">라인별(4A/4B/4C/4X) TOP · 전체 TOP · 누적지속시간 · 종합점수 기반 분석</div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # =========================================================
-# 공용 데이터 폴더 (모든 사용자가 공유)
+# 공용 데이터 폴더
 # =========================================================
 BASE_DIR = Path(__file__).parent.resolve()
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 LINES = ["4A", "4B", "4C", "4X"]
+
+# 라인별 색상 (다크 테마 어울림)
+LINE_COLORS = {
+    "4A": "#00E5FF",   # cyan
+    "4B": "#00E676",   # green
+    "4C": "#FFD600",   # yellow
+    "4X": "#FF6B35",   # orange
+    "미분류": "#8B92A0",
+}
+
+# Plotly 다크 테마 공통 레이아웃
+def apply_dark_theme(fig, height=400):
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="#1C1F26",
+        plot_bgcolor="#1C1F26",
+        font=dict(color="#FAFAFA", size=11),
+        height=height,
+        margin=dict(l=20, r=20, t=50, b=20),
+        title_font=dict(size=14, color="#FAFAFA"),
+        xaxis=dict(gridcolor="#2A2E37", zerolinecolor="#2A2E37"),
+        yaxis=dict(gridcolor="#2A2E37", zerolinecolor="#2A2E37"),
+        legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="#2A2E37"),
+    )
+    return fig
 
 
 # =========================================================
@@ -88,9 +223,6 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
     return pd.to_datetime(pd.Series([None] * len(s)), errors="coerce")
 
 
-# =========================================================
-# 유틸
-# =========================================================
 def seconds_to_hm(total_seconds: float) -> str:
     if pd.isna(total_seconds) or total_seconds < 0:
         return "0시간 0분"
@@ -116,6 +248,32 @@ def read_file_path(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     else:
         return pd.read_excel(path)
+
+
+def render_kpi_card(label, value, sub="", accent="cyan"):
+    """커스텀 KPI 카드 렌더링"""
+    color_class = {
+        "cyan": "",
+        "orange": "kpi-card-orange",
+        "green": "kpi-card-green",
+        "yellow": "kpi-card-yellow",
+        "purple": "kpi-card-purple",
+    }.get(accent, "")
+    dot_color = {
+        "cyan": "#00E5FF",
+        "orange": "#FF6B35",
+        "green": "#00E676",
+        "yellow": "#FFD600",
+        "purple": "#B388FF",
+    }.get(accent, "#00E5FF")
+    
+    st.markdown(f"""
+    <div class="kpi-card {color_class}">
+        <div class="kpi-label"><span style="color:{dot_color};">●</span> {label}</div>
+        <div class="kpi-value">{value}</div>
+        <div class="kpi-sub">{sub}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # =========================================================
@@ -149,10 +307,10 @@ def get_file_signatures():
 
 
 # =========================================================
-# 사이드바 — 파일 관리
+# 사이드바
 # =========================================================
 with st.sidebar:
-    st.header("📂 공유 파일 관리")
+    st.markdown("### 📂 공유 파일 관리")
     st.caption("업로드한 파일은 **서버에 저장**되어 모든 사용자가 함께 봅니다.")
 
     new_files = st.file_uploader(
@@ -186,20 +344,7 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    # 📍 디버그: 실제 저장 경로 표시
-    with st.expander("🔧 저장 경로 확인 (디버그)"):
-        st.code(f"저장 폴더: {DATA_DIR}")
-        st.code(f"폴더 존재: {DATA_DIR.exists()}")
-        try:
-            actual_files = list(DATA_DIR.iterdir())
-            st.write(f"폴더 내 파일 수: {len(actual_files)}")
-            for p in actual_files:
-                st.write(f"- {p.name} ({p.stat().st_size:,} bytes)")
-        except Exception as e:
-            st.error(f"폴더 읽기 오류: {e}")
-
-    # 현재 서버에 저장된 파일 목록
-    st.subheader("🗂️ 저장된 파일")
+    st.markdown("#### 🗂️ 저장된 파일")
     saved = get_file_signatures()
     if not saved:
         st.info("아직 저장된 파일이 없습니다.")
@@ -228,7 +373,7 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("종합점수 가중치")
+    st.markdown("#### ⚙️ 종합점수 가중치")
     w1 = st.slider("발생빈도 가중치", 0.0, 1.0, 0.5, 0.05)
     w2 = 1.0 - w1
     st.caption(f"지속시간(시간) 가중치: **{w2:.2f}**")
@@ -248,16 +393,12 @@ if not signatures:
 
 df_raw = load_all_files(signatures)
 
-
 # =========================================================
-# 📌 내부 처리 (UI 숨김)
-#   - 파일 정보 / 컬럼 매핑 / 라인 감지 결과 / 디버그 UI 숨김
-#   - 컬럼은 자동 감지, 라인은 파일명으로 자동 분류
+# 컬럼 자동 감지
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
 def _guess(keywords, default=None):
-    """컬럼명에 keywords 중 하나라도 포함되면 해당 컬럼 반환"""
     for c in cols:
         for k in keywords:
             if k in str(c):
@@ -267,30 +408,17 @@ def _guess(keywords, default=None):
 col_alarm = _guess(["알람", "Alarm", "MSG", "메시지"])
 col_start = _guess(["발생", "시작", "Start", "On"])
 col_end   = _guess(["해제", "종료", "End", "Off", "복구"])
-line_src  = "(자동 감지 - 파일명)"
-
 
 # =========================================================
 # 데이터 정제
 # =========================================================
 df = df_raw[[col_alarm, col_start, col_end, "_파일명"]].copy()
 df.columns = ["알람명", "발생시간", "해제시간", "파일명"]
-
-if line_src == "(자동 감지 - 파일명)":
-    df["라인"] = df["파일명"].apply(detect_line)
-elif line_src == "(자동 감지 - 알람명)":
-    df["라인"] = df["알람명"].apply(detect_line)
-else:
-    df["라인"] = df_raw[line_src].apply(detect_line)
-
+df["라인"] = df["파일명"].apply(detect_line)
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 df["해제시간"] = robust_to_datetime(df["해제시간"])
 df["지속시간_초"] = (df["해제시간"] - df["발생시간"]).dt.total_seconds()
 
-
-# =========================================================
-# 유효 데이터
-# =========================================================
 df_valid = df.dropna(subset=["발생시간", "해제시간"]).copy()
 df_valid = df_valid[df_valid["지속시간_초"] > 0]
 
@@ -300,16 +428,84 @@ if len(df_valid) == 0:
 
 
 # =========================================================
-# 전체 KPI
+# 🎯 상단 KPI 카드 (5개)
 # =========================================================
-st.subheader("📊 전체 요약")
+st.markdown('<div class="section-header">━━ OVERALL METRICS</div>', unsafe_allow_html=True)
 
 total_sec = df_valid["지속시간_초"].sum()
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("총 알람 건수", f"{len(df_valid):,} 건")
-k2.metric("고유 알람 종류", f"{df_valid['알람명'].nunique():,} 종")
-k3.metric("총 누적지속시간", seconds_to_hm(total_sec))
-k4.metric("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean()))
+unresolved = df["해제시간"].isna().sum()
+
+k1, k2, k3, k4, k5 = st.columns(5)
+with k1:
+    render_kpi_card("TOTAL ALARMS", f"{len(df_valid):,}", f"전체 알람 건수", "cyan")
+with k2:
+    render_kpi_card("UNIQUE ALARMS", f"{df_valid['알람명'].nunique():,}", f"고유 알람 종류", "green")
+with k3:
+    render_kpi_card("TOTAL DURATION", seconds_to_hm(total_sec), f"누적 지속시간", "yellow")
+with k4:
+    render_kpi_card("AVG DURATION", seconds_to_hm(df_valid["지속시간_초"].mean()), f"평균 지속시간", "orange")
+with k5:
+    render_kpi_card("LINES ACTIVE", f"{df_valid['라인'].nunique()}", f"활성 라인 수", "purple")
+
+
+# =========================================================
+# 🎯 중단: 라인별 파이 + 라인별 도넛 3개
+# =========================================================
+st.markdown('<div class="section-header">━━ LINE DISTRIBUTION</div>', unsafe_allow_html=True)
+
+col_left, col_right = st.columns([1.3, 1.7])
+
+with col_left:
+    # 라인별 알람 건수 - 도넛 차트
+    line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
+    fig = go.Figure(go.Pie(
+        labels=line_counts["라인"],
+        values=line_counts["건수"],
+        hole=0.6,
+        marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
+        textinfo="label+percent",
+        textfont=dict(color="white", size=12),
+    ))
+    fig.update_layout(
+        title="라인별 알람 분포",
+        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>Total</span>",
+                          font=dict(size=20, color="white"), showarrow=False)]
+    )
+    apply_dark_theme(fig, height=380)
+    st.plotly_chart(fig, use_container_width=True)
+
+with col_right:
+    # 라인별 요약 - 미니 도넛 4개
+    st.markdown("**라인별 비율 (알람 건수 기준)**")
+    line_summary = df_valid.groupby("라인").size().reset_index(name="건수")
+    total = line_summary["건수"].sum()
+    
+    donut_cols = st.columns(len(line_summary))
+    for dcol, (_, row) in zip(donut_cols, line_summary.iterrows()):
+        with dcol:
+            pct = round(row["건수"] / total * 100, 1)
+            color = LINE_COLORS.get(row["라인"], "#8B92A0")
+            fig = go.Figure(go.Pie(
+                values=[pct, 100 - pct],
+                hole=0.75,
+                marker=dict(colors=[color, "#2A2E37"]),
+                showlegend=False,
+                textinfo="none",
+                sort=False,
+            ))
+            fig.update_layout(
+                paper_bgcolor="#1C1F26",
+                height=180,
+                margin=dict(l=0, r=0, t=10, b=0),
+                annotations=[dict(text=f"<b>{pct}%</b>",
+                                  font=dict(size=18, color="white"), showarrow=False)],
+            )
+            st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
+            st.markdown(
+                f"<center><span style='color:{color};font-weight:600;'>{row['라인']}</span>"
+                f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
+                unsafe_allow_html=True
+            )
 
 
 # =========================================================
@@ -337,7 +533,7 @@ def build_agg(data: pd.DataFrame) -> pd.DataFrame:
     return agg.sort_values("종합점수", ascending=False).reset_index(drop=True)
 
 
-def render_top(title: str, data: pd.DataFrame, key_prefix: str):
+def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#00E5FF"):
     if len(data) == 0:
         st.warning(f"⚠️ **{title}** : 유효 데이터 없음")
         return
@@ -347,9 +543,12 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str):
 
     sec_sum = data["지속시간_초"].sum()
     a, b, c = st.columns(3)
-    a.metric("알람 건수", f"{len(data):,} 건")
-    b.metric("고유 알람", f"{data['알람명'].nunique():,} 종")
-    c.metric("누적지속시간", seconds_to_hm(sec_sum))
+    with a:
+        render_kpi_card("ALARMS", f"{len(data):,}", "알람 건수", "cyan")
+    with b:
+        render_kpi_card("UNIQUE", f"{data['알람명'].nunique():,}", "고유 알람", "green")
+    with c:
+        render_kpi_card("DURATION", seconds_to_hm(sec_sum), "누적 지속시간", "yellow")
 
     st.markdown(f"#### 🏆 {title} - TOP {top_n}")
     st.dataframe(
@@ -358,26 +557,31 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str):
         use_container_width=True,
     )
 
-    t1, t2, t3 = st.tabs(["발생빈도", "누적지속시간", "종합점수"])
+    t1, t2, t3 = st.tabs(["📊 발생빈도", "⏱️ 누적지속시간", "⭐ 종합점수"])
     with t1:
         fig = px.bar(top_df.sort_values("발생빈도"),
                      x="발생빈도", y="알람명", orientation="h",
-                     text="발생빈도", title=f"{title} - 발생빈도 TOP {top_n}")
-        fig.update_layout(height=450)
+                     text="발생빈도",
+                     color_discrete_sequence=[accent_color])
+        fig.update_traces(textposition="outside")
+        apply_dark_theme(fig, height=450)
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
     with t2:
         fig = px.bar(top_df.sort_values("누적지속시간_시간"),
                      x="누적지속시간_시간", y="알람명", orientation="h",
                      text="누적지속시간(시간+분)",
-                     title=f"{title} - 누적지속시간 TOP {top_n}",
-                     labels={"누적지속시간_시간": "누적지속시간 (h)"})
-        fig.update_layout(height=450)
+                     labels={"누적지속시간_시간": "누적지속시간 (h)"},
+                     color_discrete_sequence=["#FFD600"])
+        fig.update_traces(textposition="outside")
+        apply_dark_theme(fig, height=450)
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_dur")
     with t3:
         fig = px.bar(top_df.sort_values("종합점수"),
                      x="종합점수", y="알람명", orientation="h",
-                     text="종합점수", title=f"{title} - 종합점수 TOP {top_n}")
-        fig.update_layout(height=450)
+                     text="종합점수",
+                     color_discrete_sequence=["#B388FF"])
+        fig.update_traces(textposition="outside")
+        apply_dark_theme(fig, height=450)
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_score")
 
     csv = agg[["알람명", "발생빈도", "누적지속시간(시간+분)",
@@ -392,23 +596,22 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str):
 # =========================================================
 # 라인별 TOP + 전체 TOP
 # =========================================================
-st.markdown("---")
-st.subheader("🏭 라인별 · 전체 TOP 분석")
+st.markdown('<div class="section-header">━━ LINE-BY-LINE ANALYSIS</div>', unsafe_allow_html=True)
 
 tab_all, tab_4a, tab_4b, tab_4c, tab_4x, tab_cmp = st.tabs(
     ["🌐 전체", "🅰️ 4A", "🅱️ 4B", "🅲 4C", "❎ 4X", "📊 라인 비교"]
 )
 
 with tab_all:
-    render_top("전체", df_valid, "all")
+    render_top("전체", df_valid, "all", "#00E5FF")
 with tab_4a:
-    render_top("4A 라인", df_valid[df_valid["라인"] == "4A"], "4a")
+    render_top("4A 라인", df_valid[df_valid["라인"] == "4A"], "4a", LINE_COLORS["4A"])
 with tab_4b:
-    render_top("4B 라인", df_valid[df_valid["라인"] == "4B"], "4b")
+    render_top("4B 라인", df_valid[df_valid["라인"] == "4B"], "4b", LINE_COLORS["4B"])
 with tab_4c:
-    render_top("4C 라인", df_valid[df_valid["라인"] == "4C"], "4c")
+    render_top("4C 라인", df_valid[df_valid["라인"] == "4C"], "4c", LINE_COLORS["4C"])
 with tab_4x:
-    render_top("4X 라인", df_valid[df_valid["라인"] == "4X"], "4x")
+    render_top("4X 라인", df_valid[df_valid["라인"] == "4X"], "4x", LINE_COLORS["4X"])
 
 with tab_cmp:
     st.markdown("#### 📊 라인별 요약")
@@ -431,12 +634,20 @@ with tab_cmp:
     c1, c2 = st.columns(2)
     with c1:
         fig = px.bar(line_summary, x="라인", y="알람건수",
-                     text="알람건수", title="라인별 알람 건수", color="라인")
+                     text="알람건수", color="라인",
+                     color_discrete_map=LINE_COLORS)
+        fig.update_traces(textposition="outside")
+        apply_dark_theme(fig, height=380)
+        fig.update_layout(title="라인별 알람 건수")
         st.plotly_chart(fig, use_container_width=True)
     with c2:
         fig = px.bar(line_summary, x="라인", y="누적지속시간_시간",
-                     text="누적지속시간", title="라인별 누적지속시간",
-                     labels={"누적지속시간_시간": "누적지속시간 (h)"}, color="라인")
+                     text="누적지속시간", color="라인",
+                     labels={"누적지속시간_시간": "누적지속시간 (h)"},
+                     color_discrete_map=LINE_COLORS)
+        fig.update_traces(textposition="outside")
+        apply_dark_theme(fig, height=380)
+        fig.update_layout(title="라인별 누적지속시간")
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("#### 🔍 전체 TOP 알람의 라인별 분포")
@@ -451,12 +662,15 @@ with tab_cmp:
     comp["누적지속시간_시간"] = (comp["누적지속_초"] / 3600).round(2)
 
     fig1 = px.bar(comp, x="알람명", y="발생빈도", color="라인",
-                  title=f"전체 TOP {top_n} 알람 - 라인별 발생빈도", barmode="stack")
-    fig1.update_layout(xaxis_tickangle=-30, height=500)
+                  barmode="stack", color_discrete_map=LINE_COLORS)
+    fig1.update_layout(xaxis_tickangle=-30, title=f"전체 TOP {top_n} 알람 - 라인별 발생빈도")
+    apply_dark_theme(fig1, height=500)
     st.plotly_chart(fig1, use_container_width=True)
 
     fig2 = px.bar(comp, x="알람명", y="누적지속시간_시간", color="라인",
-                  title=f"전체 TOP {top_n} 알람 - 라인별 누적지속시간(h)",
-                  barmode="stack", labels={"누적지속시간_시간": "누적지속시간 (h)"})
-    fig2.update_layout(xaxis_tickangle=-30, height=500)
+                  barmode="stack",
+                  labels={"누적지속시간_시간": "누적지속시간 (h)"},
+                  color_discrete_map=LINE_COLORS)
+    fig2.update_layout(xaxis_tickangle=-30, title=f"전체 TOP {top_n} 알람 - 라인별 누적지속시간(h)")
+    apply_dark_theme(fig2, height=500)
     st.plotly_chart(fig2, use_container_width=True)
