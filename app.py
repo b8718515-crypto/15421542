@@ -27,7 +27,7 @@ st.markdown("""
     .dashboard-header {
         background: linear-gradient(90deg, #1C1F26 0%, #0E1117 100%);
         padding: 20px 30px;
-        border-radius: 16px;
+        border-radius: 10px;
         border-left: 4px solid #00E5FF;
         margin-bottom: 20px;
     }
@@ -43,11 +43,10 @@ st.markdown("""
         margin-top: 5px;
     }
     
-    /* 기본(큰) KPI 카드 - 상단 요약용 */
     .kpi-card {
         background-color: #1C1F26;
         padding: 20px;
-        border-radius: 16px;
+        border-radius: 10px;
         border-left: 3px solid #00E5FF;
         height: 110px;
     }
@@ -70,33 +69,6 @@ st.markdown("""
     }
     .kpi-sub { display: none; }
     
-    /* 작은 KPI 카드 - 라인별 상세용 */
-    .kpi-card-sm {
-        background-color: #1C1F26;
-        padding: 8px 16px;
-        border-radius: 14px;
-        border-left: 3px solid #00E5FF;
-        height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .kpi-card-sm.sm-orange { border-left-color: #FF6B35; }
-    .kpi-card-sm.sm-green  { border-left-color: #00E676; }
-    .kpi-card-sm.sm-yellow { border-left-color: #FFD600; }
-    .kpi-card-sm.sm-purple { border-left-color: #B388FF; }
-    
-    .kpi-sm-label {
-        color: #8B92A0;
-        font-size: 11px;
-        font-weight: 600;
-    }
-    .kpi-sm-value {
-        color: #FAFAFA;
-        font-size: 16px;
-        font-weight: 700;
-    }
-    
     .section-header {
         color: #8B92A0;
         font-size: 13px;
@@ -106,123 +78,27 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    /* ✨ 탭 라운드 - 고급화 (개선) */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #16191F;
-        padding: 8px;
-        border-radius: 14px;
-        border: 1px solid #2A2E37;
+        gap: 4px;
+        background-color: #1C1F26;
+        padding: 5px;
+        border-radius: 8px;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
         color: #8B92A0;
-        border-radius: 10px;
-        padding: 10px 22px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-weight: 500;
-        border: 1px solid transparent;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: rgba(0, 229, 255, 0.06);
-        color: #FAFAFA;
-        border-color: rgba(0, 229, 255, 0.2);
+        border-radius: 6px;
+        padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #00E5FF 0%, #0091EA 100%) !important;
+        background-color: #00E5FF !important;
         color: #0E1117 !important;
-        font-weight: 700 !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        box-shadow: 
-            0 6px 20px rgba(0, 229, 255, 0.4),
-            0 0 0 1px rgba(0, 229, 255, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.25);
-        transform: translateY(-2px);
-    }
-    .stTabs [aria-selected="true"]:hover {
-        background: linear-gradient(135deg, #18F0FF 0%, #00A5F0 100%) !important;
-        box-shadow: 
-            0 8px 24px rgba(0, 229, 255, 0.5),
-            0 0 0 1px rgba(0, 229, 255, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    /* 탭 하이라이트 밑줄/보더 완전 제거 */
-    .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] {
-        background-color: transparent !important;
-        display: none !important;
+        font-weight: 700;
     }
     
-    /* 데이터프레임 라운드 */
     .stDataFrame {
         background-color: #1C1F26;
-        border-radius: 14px;
-        overflow: hidden;
-    }
-    
-    /* Plotly 차트 컨테이너 라운드 */
-    .js-plotly-plot, .plot-container {
-        border-radius: 16px !important;
-        overflow: hidden;
-    }
-    
-    /* 버튼 라운드 */
-    .stButton>button, .stDownloadButton>button {
-        border-radius: 10px;
-    }
-    
-    /* 파일 업로더 라운드 */
-    .stFileUploader > div {
-        border-radius: 14px;
-    }
-    
-    /* ✨ 라인별 비율 미니 도넛 - 컬럼 자체를 카드로 */
-    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
-    > div[data-testid="column"] {
-        background-color: #1C1F26;
-        border-radius: 16px;
-        border: 1px solid #2A2E37;
-        padding: 8px 8px 16px 8px;
-        margin: 0 4px;
-    }
-    /* 컬럼 내부의 빈 간격 제거 */
-    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
-    > div[data-testid="column"] > div[data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-    /* plotly 차트 배경 투명하게 (카드 배경 그대로 보이게) */
-    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
-    .js-plotly-plot .plot-container {
-        background: transparent !important;
-    }
-    
-    .mini-donut-label {
-        text-align: center;
-        font-weight: 700;
-        font-size: 13px;
-        margin-top: 4px;
-    }
-    .mini-donut-sub {
-        text-align: center;
-        color: #8B92A0;
-        font-size: 12px;
-        margin-top: 4px;
-    }
-
-    /* ✨ 미니 도넛 위 빈 컨테이너/여백 제거 */
-    div[data-testid="column"]:has(.mini-donut-card) > div:first-child {
-        gap: 0 !important;
-    }
-    div[data-testid="stVerticalBlock"]:has(> div > .mini-donut-card) {
-        gap: 0 !important;
-    }
-    
-    /* ✨ [추가] 라인별 알람 분포 (큰 도넛) - 카드 스타일 */
-    div[data-testid="stVerticalBlock"]:has(> div > .big-donut-marker) 
-    .js-plotly-plot {
-        background-color: #1C1F26 !important;
-        border-radius: 16px !important;
-        border: 1px solid #2A2E37 !important;
+        border-radius: 8px;
     }
     
     hr { border-color: #2A2E37; }
@@ -386,31 +262,6 @@ def render_kpi_card(label, value, sub="", accent="cyan"):
     """, unsafe_allow_html=True)
 
 
-def render_kpi_card_sm(label, value, accent="cyan"):
-    """작은 KPI 카드 - 라인별 상세 분석용"""
-    color_class = {
-        "cyan": "",
-        "orange": "sm-orange",
-        "green": "sm-green",
-        "yellow": "sm-yellow",
-        "purple": "sm-purple",
-    }.get(accent, "")
-    dot_color = {
-        "cyan": "#00E5FF",
-        "orange": "#FF6B35",
-        "green": "#00E676",
-        "yellow": "#FFD600",
-        "purple": "#B388FF",
-    }.get(accent, "#00E5FF")
-    
-    st.markdown(f"""
-    <div class="kpi-card-sm {color_class}">
-        <div class="kpi-sm-label"><span style="color:{dot_color};">●</span> {label}</div>
-        <div class="kpi-sm-value">{value}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 # =========================================================
 # 캐시된 로더
 # =========================================================
@@ -442,7 +293,7 @@ def get_file_signatures():
 
 
 # =========================================================
-# 사이드바
+# 사이드바 (가중치 슬라이더 제거)
 # =========================================================
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
@@ -523,7 +374,7 @@ if not signatures:
 df_raw = load_all_files(signatures)
 
 # =========================================================
-# 컬럼 자동 감지
+# 컬럼 자동 감지 (지속시간 불필요 → 알람명/발생시간만 있어도 OK)
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
@@ -545,6 +396,7 @@ df.columns = ["알람명", "발생시간", "파일명"]
 df["라인"] = df["파일명"].apply(detect_line)
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 
+# 알람명이 있는 행만 유효 데이터로 사용
 df_valid = df.dropna(subset=["알람명"]).copy()
 df_valid = df_valid[df_valid["알람명"].astype(str).str.strip() != ""]
 
@@ -575,9 +427,6 @@ st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_
 col_left, col_right = st.columns([1.3, 1.7])
 
 with col_left:
-    # ✨ [추가] 카드 스타일 마커 (CSS :has()로 감지)
-    st.markdown('<div class="big-donut-marker"></div>', unsafe_allow_html=True)
-    
     line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
     line_counts["라인표시"] = line_counts["라인"].map(LINE_LABELS)
     
@@ -588,27 +437,14 @@ with col_left:
         marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
         textinfo="label+percent",
         textfont=dict(color="white", size=11),
-        domain=dict(x=[0.35, 1.0], y=[0.05, 0.95]),   # ✨ [수정] 파이를 우측으로
     ))
     fig.update_layout(
         title="라인별 알람 분포",
-        annotations=[dict(
-            text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
-            font=dict(size=20, color="white"),
-            showarrow=False,
-            x=0.675, y=0.5,              # ✨ [수정] 중앙 텍스트를 파이 중심으로
-            xref="paper", yref="paper",
-        )],
-        legend=dict(                      # ✨ [수정] 범례 왼쪽 세로 중앙 배치
-            x=0.0, y=0.5,
-            xanchor="left",
-            yanchor="middle",
-            bgcolor="rgba(0,0,0,0)",
-            bordercolor="#2A2E37",
-        ),
+        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
+                          font=dict(size=20, color="white"), showarrow=False)]
     )
     apply_dark_theme(fig, height=380)
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig, use_container_width=True)
 
 with col_right:
     st.markdown("**라인별 비율 (알람 건수 기준)**")
@@ -631,31 +467,22 @@ with col_right:
                 sort=False,
             ))
             fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                height=170,
-                margin=dict(l=5, r=5, t=5, b=5),
+                paper_bgcolor="#1C1F26",
+                height=180,
+                margin=dict(l=0, r=0, t=10, b=0),
                 annotations=[dict(text=f"<b>{pct}%</b>",
                                   font=dict(size=18, color="white"), showarrow=False)],
             )
-            
-            st.plotly_chart(
-                fig, use_container_width=True,
-                key=f"mini_donut_{row['라인']}",
-                config={'displayModeBar': False},
-            )
+            st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
             st.markdown(
-                f"""
-                <div class="mini-donut-label" style="color:{color};">{line_label}</div>
-                <div class="mini-donut-sub">{row['건수']:,} 건</div>
-                """,
+                f"<center><span style='color:{color};font-weight:600;font-size:12px;'>{line_label}</span>"
+                f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
                 unsafe_allow_html=True
             )
 
 
-
 # =========================================================
-# 🔄 집계
+# 🔄 집계: 발생빈도만 사용
 # =========================================================
 def build_agg(data: pd.DataFrame) -> pd.DataFrame:
     if len(data) == 0:
@@ -678,33 +505,24 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 
     a, b = st.columns(2)
     with a:
-        render_kpi_card_sm("알람 건수", f"{len(data):,} 건", "cyan")
+        render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
     with b:
-        render_kpi_card_sm("고유 알람", f"{data['알람명'].nunique():,} 종", "green")
+        render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
 
+    st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
     st.dataframe(
         top_df[["알람명", "발생빈도", "비율(%)"]],
         use_container_width=True,
     )
 
+    # 발생빈도 막대 차트
     fig = px.bar(top_df.sort_values("발생빈도"),
                  x="발생빈도", y="알람명", orientation="h",
                  text="발생빈도",
                  color_discrete_sequence=[accent_color])
     fig.update_traces(textposition="outside")
-    apply_dark_theme(fig, height=500)
-    
-    fig.update_layout(
-        title=dict(
-            text=f"<b>🏆 {title} - 발생빈도 TOP {top_n}</b>",
-            x=0.5,
-            xanchor="center",
-            y=0.97,
-            yanchor="top",
-            font=dict(size=18, color="#FAFAFA"),
-        ),
-        margin=dict(l=40, r=40, t=80, b=40),
-    )
+    apply_dark_theme(fig, height=450)
+    fig.update_layout(title=f"{title} - 발생빈도 TOP {top_n}")
     st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
 
     csv = agg[["알람명", "발생빈도", "비율(%)"]].to_csv(index=False).encode("utf-8-sig")
