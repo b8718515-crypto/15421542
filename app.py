@@ -424,36 +424,35 @@ with k3:
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
+# ===== 라인별 분포 카드 배경을 '고유 알람' 카드와 동일한 톤으로 통일 =====
+st.markdown("""
+<style>
+/* 라인별 분포 카드 (좌: 라인별 알람 분포 / 우: 라인별 비율) 배경 통일 */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-dist-card-marker),
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
+    background-color: #1C1F26 !important;
+    border: 1px solid #2A2E37 !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 col_left, col_right = st.columns(2)
 
-# ---------- 왼쪽: 라인별 알람 분포 ----------
+# ---------- 왼쪽: 라인별 알람 분포 (전체 도넛) ----------
 with col_left:
     with st.container(border=True):
-        # 카드 식별 마커 (숨김)
+        # 카드 식별 마커
         st.markdown(
             "<div class='line-dist-card-marker' style='display:none;'></div>",
             unsafe_allow_html=True
         )
-        st.markdown("### 라인별 알람 분포")
-
-        # ===== 기존 도넛 차트 코드 그대로 =====
-        # fig_dist = go.Figure(...)
-        # st.plotly_chart(fig_dist, use_container_width=True, key="line_dist_donut")
-
-# ---------- 오른쪽: 라인별 비율 (알람 건수 기준) ----------
-with col_right:
-    with st.container(border=True):
-        # 카드 식별 마커 (숨김)
         st.markdown(
-            "<div class='line-ratio-card-marker' style='display:none;'></div>",
+            "<div style='color:#FAFAFA; font-size:15px; font-weight:700; margin-bottom:10px;'>"
+            "라인별 알람 분포</div>",
             unsafe_allow_html=True
         )
-        st.markdown("### 라인별 비율 (알람 건수 기준)")
-
-        # ===== 기존 4개 도넛 차트 코드 그대로 =====
-
-        # (제목, 도넛 차트, 레전드 등 기존 코드 그대로)
-        st.markdown("### 라인별 알람 분포")  # 기존 제목 방식 유지
 
         line_dist = df_valid.groupby("라인").size().reset_index(name="건수")
         line_dist["라인_라벨"] = line_dist["라인"].map(LINE_LABELS)
@@ -471,7 +470,7 @@ with col_right:
             direction="clockwise",
         ))
         fig_dist.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",   # ← 투명 유지 → 카드 배경이 그대로 비침
+            paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             height=450,
             margin=dict(l=10, r=10, t=10, b=10),
@@ -483,7 +482,8 @@ with col_right:
                 font=dict(color="white", size=12),
             ),
             annotations=[dict(
-                text=f"<b>{line_dist['건수'].sum():,}</b><br><span style='font-size:12px;color:#8B92A0;'>전체</span>",
+                text=f"<b>{line_dist['건수'].sum():,}</b><br>"
+                     f"<span style='font-size:12px;color:#8B92A0;'>전체</span>",
                 font=dict(size=22, color="white"),
                 showarrow=False,
                 x=0.5, y=0.5,
@@ -492,34 +492,16 @@ with col_right:
         st.plotly_chart(fig_dist, use_container_width=True, key="line_dist_donut")
 
 
-
+# ---------- 오른쪽: 라인별 비율 (미니 도넛 4개) ----------
 with col_right:
-# ===== 라인별 분포 섹션 전체 배경을 '고유 알람' 카드와 동일하게 =====
-st.markdown("""
-<style>
-/* 라인별 분포 카드 (좌: 라인별 알람 분포 / 우: 라인별 비율) 배경 통일 */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-dist-card-marker),
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
-    background-color: #1C1F26 !important;   /* ← 고유 알람 카드와 동일 톤 */
-    border: 1px solid #2A2E37 !important;
-    border-radius: 10px !important;
-    padding: 15px !important;
-}
-
-/* 전체 요약 metric 카드와 정확히 같은 톤을 쓰고 싶다면 아래 선택자도 참고 */
-div[data-testid="stMetric"] {
-    background-color: #1C1F26 !important;
-    border-radius: 10px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
     with st.container(border=True):
-        # 카드 식별용 마커 + 제목
+        # 카드 식별 마커 + 제목
         st.markdown(
-            "<div class='line-ratio-card-marker' "
-            "style='color:#FAFAFA; font-size:15px; font-weight:700; margin-bottom:10px;'>"
+            "<div class='line-ratio-card-marker' style='display:none;'></div>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            "<div style='color:#FAFAFA; font-size:15px; font-weight:700; margin-bottom:10px;'>"
             "라인별 비율 (알람 건수 기준)</div>",
             unsafe_allow_html=True
         )
@@ -540,7 +522,7 @@ div[data-testid="stMetric"] {
                 fig = go.Figure(go.Pie(
                     values=[pct, 100 - pct],
                     hole=0.72,
-                    marker=dict(colors=[color, "#1C1F26"]),  # ← 도넛 배경 링 색을 살짝 어둡게 (대비↑)
+                    marker=dict(colors=[color, "#2A2E37"]),
                     showlegend=False,
                     textinfo="none",
                     sort=False,
@@ -548,7 +530,7 @@ div[data-testid="stMetric"] {
                     rotation=0,
                 ))
                 fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",   # 투명 유지 → 카드 배경이 그대로 비침
+                    paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     height=180,
                     margin=dict(l=5, r=5, t=10, b=5),
@@ -566,6 +548,7 @@ div[data-testid="stMetric"] {
                     f"</center>",
                     unsafe_allow_html=True
                 )
+
 
 
 
