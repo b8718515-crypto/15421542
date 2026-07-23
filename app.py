@@ -27,7 +27,7 @@ st.markdown("""
     .dashboard-header {
         background: linear-gradient(90deg, #1C1F26 0%, #0E1117 100%);
         padding: 20px 30px;
-        border-radius: 10px;
+        border-radius: 16px;
         border-left: 4px solid #00E5FF;
         margin-bottom: 20px;
     }
@@ -43,10 +43,11 @@ st.markdown("""
         margin-top: 5px;
     }
     
+    /* 기본(큰) KPI 카드 - 상단 요약용 */
     .kpi-card {
         background-color: #1C1F26;
         padding: 20px;
-        border-radius: 10px;
+        border-radius: 16px;
         border-left: 3px solid #00E5FF;
         height: 110px;
     }
@@ -69,6 +70,33 @@ st.markdown("""
     }
     .kpi-sub { display: none; }
     
+    /* 작은 KPI 카드 - 라인별 상세용 */
+    .kpi-card-sm {
+        background-color: #1C1F26;
+        padding: 8px 16px;
+        border-radius: 14px;
+        border-left: 3px solid #00E5FF;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .kpi-card-sm.sm-orange { border-left-color: #FF6B35; }
+    .kpi-card-sm.sm-green  { border-left-color: #00E676; }
+    .kpi-card-sm.sm-yellow { border-left-color: #FFD600; }
+    .kpi-card-sm.sm-purple { border-left-color: #B388FF; }
+    
+    .kpi-sm-label {
+        color: #8B92A0;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .kpi-sm-value {
+        color: #FAFAFA;
+        font-size: 16px;
+        font-weight: 700;
+    }
+    
     .section-header {
         color: #8B92A0;
         font-size: 13px;
@@ -78,16 +106,17 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
+    /* 탭 라운드 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
         background-color: #1C1F26;
-        padding: 5px;
-        border-radius: 8px;
+        padding: 6px;
+        border-radius: 14px;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
         color: #8B92A0;
-        border-radius: 6px;
+        border-radius: 10px;
         padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
@@ -96,9 +125,27 @@ st.markdown("""
         font-weight: 700;
     }
     
+    /* 데이터프레임 라운드 */
     .stDataFrame {
         background-color: #1C1F26;
-        border-radius: 8px;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+    
+    /* Plotly 차트 컨테이너 라운드 */
+    .js-plotly-plot, .plot-container {
+        border-radius: 16px !important;
+        overflow: hidden;
+    }
+    
+    /* 버튼 라운드 */
+    .stButton>button, .stDownloadButton>button {
+        border-radius: 10px;
+    }
+    
+    /* 파일 업로더 라운드 */
+    .stFileUploader > div {
+        border-radius: 14px;
     }
     
     hr { border-color: #2A2E37; }
@@ -258,6 +305,31 @@ def render_kpi_card(label, value, sub="", accent="cyan"):
         <div class="kpi-label"><span style="color:{dot_color};">●</span> {label}</div>
         <div class="kpi-value">{value}</div>
         <div class="kpi-sub">{sub}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_kpi_card_sm(label, value, accent="cyan"):
+    """작은 KPI 카드 - 라인별 상세 분석용"""
+    color_class = {
+        "cyan": "",
+        "orange": "sm-orange",
+        "green": "sm-green",
+        "yellow": "sm-yellow",
+        "purple": "sm-purple",
+    }.get(accent, "")
+    dot_color = {
+        "cyan": "#00E5FF",
+        "orange": "#FF6B35",
+        "green": "#00E676",
+        "yellow": "#FFD600",
+        "purple": "#B388FF",
+    }.get(accent, "#00E5FF")
+    
+    st.markdown(f"""
+    <div class="kpi-card-sm {color_class}">
+        <div class="kpi-sm-label"><span style="color:{dot_color};">●</span> {label}</div>
+        <div class="kpi-sm-value">{value}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -503,11 +575,12 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     top_df = agg.head(top_n).copy()
     top_df.index = top_df.index + 1
 
+    # ✅ 작은 KPI 카드로 변경
     a, b = st.columns(2)
     with a:
-        render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
+        render_kpi_card_sm("알람 건수", f"{len(data):,} 건", "cyan")
     with b:
-        render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
+        render_kpi_card_sm("고유 알람", f"{data['알람명'].nunique():,} 종", "green")
 
     st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
     st.dataframe(
