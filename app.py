@@ -543,6 +543,7 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 
     sec_sum = data["지속시간_초"].sum()
     a, b, c = st.columns(3)
+    
 with a:
     render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
 with b:
