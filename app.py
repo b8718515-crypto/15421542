@@ -447,38 +447,60 @@ with col_left:
     st.plotly_chart(fig, use_container_width=True)
 
 with col_right:
-    st.markdown("**라인별 비율 (알람 건수 기준)**")
+    # 통합 카드 컨테이너 시작
+    st.markdown("""
+    <div style="background-color:#1C1F26; padding:20px 20px 10px 20px; border-radius:10px;">
+        <div style="color:#FAFAFA; font-size:14px; font-weight:600; margin-bottom:15px;">
+            라인별 비율 (알람 건수 기준)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     line_summary = df_valid.groupby("라인").size().reset_index(name="건수")
+    # 라인 순서 고정 (4A → 4B → 4C → 4X)
+    line_order = ["4A", "4B", "4C", "4X"]
+    line_summary["_order"] = line_summary["라인"].map({v: i for i, v in enumerate(line_order)})
+    line_summary = line_summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
     total = line_summary["건수"].sum()
-    
+
     donut_cols = st.columns(len(line_summary))
     for dcol, (_, row) in zip(donut_cols, line_summary.iterrows()):
         with dcol:
             pct = round(row["건수"] / total * 100, 1)
             color = LINE_COLORS.get(row["라인"], "#8B92A0")
             line_label = LINE_LABELS.get(row["라인"], row["라인"])
-            
+
+            # 완전한 원형 도넛 (왼쪽 큰 도넛과 동일 스타일)
             fig = go.Figure(go.Pie(
                 values=[pct, 100 - pct],
-                hole=0.75,
+                hole=0.72,
                 marker=dict(colors=[color, "#2A2E37"]),
                 showlegend=False,
                 textinfo="none",
                 sort=False,
+                direction="clockwise",
+                rotation=0,
             ))
             fig.update_layout(
                 paper_bgcolor="#1C1F26",
+                plot_bgcolor="#1C1F26",
                 height=180,
-                margin=dict(l=0, r=0, t=10, b=0),
-                annotations=[dict(text=f"<b>{pct}%</b>",
-                                  font=dict(size=18, color="white"), showarrow=False)],
+                margin=dict(l=5, r=5, t=10, b=5),
+                annotations=[dict(
+                    text=f"<b>{pct}%</b>",
+                    font=dict(size=20, color="white"),
+                    showarrow=False
+                )],
             )
             st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
             st.markdown(
-                f"<center><span style='color:{color};font-weight:600;font-size:12px;'>{line_label}</span>"
-                f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
+                f"<center>"
+                f"<span style='color:{color};font-weight:700;font-size:13px;'>{line_label}</span>"
+                f"<br><small style='color:#8B92A0;font-size:11px;'>{row['건수']:,} 건</small>"
+                f"</center>",
                 unsafe_allow_html=True
             )
+
 
 
 # =========================================================
