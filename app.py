@@ -209,13 +209,20 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    
     /* ✨ 미니 도넛 위 빈 컨테이너/여백 제거 */
     div[data-testid="column"]:has(.mini-donut-card) > div:first-child {
         gap: 0 !important;
     }
     div[data-testid="stVerticalBlock"]:has(> div > .mini-donut-card) {
         gap: 0 !important;
+    }
+    
+    /* ✨ [추가] 라인별 알람 분포 (큰 도넛) - 카드 스타일 */
+    div[data-testid="stVerticalBlock"]:has(> div > .big-donut-marker) 
+    .js-plotly-plot {
+        background-color: #1C1F26 !important;
+        border-radius: 16px !important;
+        border: 1px solid #2A2E37 !important;
     }
     
     hr { border-color: #2A2E37; }
@@ -568,6 +575,9 @@ st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_
 col_left, col_right = st.columns([1.3, 1.7])
 
 with col_left:
+    # ✨ [추가] 카드 스타일 마커 (CSS :has()로 감지)
+    st.markdown('<div class="big-donut-marker"></div>', unsafe_allow_html=True)
+    
     line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
     line_counts["라인표시"] = line_counts["라인"].map(LINE_LABELS)
     
@@ -578,14 +588,27 @@ with col_left:
         marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
         textinfo="label+percent",
         textfont=dict(color="white", size=11),
+        domain=dict(x=[0.35, 1.0], y=[0.05, 0.95]),   # ✨ [수정] 파이를 우측으로
     ))
     fig.update_layout(
         title="라인별 알람 분포",
-        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
-                          font=dict(size=20, color="white"), showarrow=False)]
+        annotations=[dict(
+            text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
+            font=dict(size=20, color="white"),
+            showarrow=False,
+            x=0.675, y=0.5,              # ✨ [수정] 중앙 텍스트를 파이 중심으로
+            xref="paper", yref="paper",
+        )],
+        legend=dict(                      # ✨ [수정] 범례 왼쪽 세로 중앙 배치
+            x=0.0, y=0.5,
+            xanchor="left",
+            yanchor="middle",
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="#2A2E37",
+        ),
     )
     apply_dark_theme(fig, height=380)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 with col_right:
     st.markdown("**라인별 비율 (알람 건수 기준)**")
@@ -608,15 +631,14 @@ with col_right:
                 sort=False,
             ))
             fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",   # ⬅️ 완전 투명
-                plot_bgcolor="rgba(0,0,0,0)",    # ⬅️ 완전 투명
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
                 height=170,
                 margin=dict(l=5, r=5, t=5, b=5),
                 annotations=[dict(text=f"<b>{pct}%</b>",
                                   font=dict(size=18, color="white"), showarrow=False)],
             )
             
-            # ✨ 빈 컨테이너 없이 차트 + 라벨만 직접 렌더링
             st.plotly_chart(
                 fig, use_container_width=True,
                 key=f"mini_donut_{row['라인']}",
@@ -660,13 +682,11 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     with b:
         render_kpi_card_sm("고유 알람", f"{data['알람명'].nunique():,} 종", "green")
 
-    # 표는 유지 (제목은 차트 안으로 이동)
     st.dataframe(
         top_df[["알람명", "발생빈도", "비율(%)"]],
         use_container_width=True,
     )
 
-    # 발생빈도 막대 차트
     fig = px.bar(top_df.sort_values("발생빈도"),
                  x="발생빈도", y="알람명", orientation="h",
                  text="발생빈도",
@@ -674,7 +694,6 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     fig.update_traces(textposition="outside")
     apply_dark_theme(fig, height=500)
     
-    # ✨ 제목을 상단 중앙 + 글자 크게
     fig.update_layout(
         title=dict(
             text=f"<b>🏆 {title} - 발생빈도 TOP {top_n}</b>",
