@@ -438,10 +438,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-ca
 
 /* 카드 내부의 컬럼 wrapper 배경은 투명 처리 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) 
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 0 !important;
+    background-color: #1A1D26 !important;   /* ← 회색빛 네이비로 변경 ⭐ */
+    border: 1px solid #2A2E3A !important;   /* ← 테두리도 살짝 밝게 */
+    border-radius: 10px !important;
+    padding: 20px 25px !important;
     min-height: auto;
 }
 </style>
