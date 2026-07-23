@@ -430,28 +430,29 @@ if len(df_valid) == 0:
 # =========================================================
 # 🎯 상단 KPI 카드 (5개)
 # =========================================================
-st.markdown('<div class="section-header">━━ OVERALL METRICS</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">━━ 전체 요약</div>', unsafe_allow_html=True)
 
 total_sec = df_valid["지속시간_초"].sum()
 unresolved = df["해제시간"].isna().sum()
 
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    render_kpi_card("TOTAL ALARMS", f"{len(df_valid):,}", f"전체 알람 건수", "cyan")
+    render_kpi_card("전체 알람", f"{len(df_valid):,} 건", "총 발생 알람", "cyan")
 with k2:
-    render_kpi_card("UNIQUE ALARMS", f"{df_valid['알람명'].nunique():,}", f"고유 알람 종류", "green")
+    render_kpi_card("고유 알람", f"{df_valid['알람명'].nunique():,} 종", "알람 종류 수", "green")
 with k3:
-    render_kpi_card("TOTAL DURATION", seconds_to_hm(total_sec), f"누적 지속시간", "yellow")
+    render_kpi_card("누적 지속시간", seconds_to_hm(total_sec), "전체 누적 시간", "yellow")
 with k4:
-    render_kpi_card("AVG DURATION", seconds_to_hm(df_valid["지속시간_초"].mean()), f"평균 지속시간", "orange")
+    render_kpi_card("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean()), "건당 평균", "orange")
 with k5:
-    render_kpi_card("LINES ACTIVE", f"{df_valid['라인'].nunique()}", f"활성 라인 수", "purple")
+    render_kpi_card("활성 라인", f"{df_valid['라인'].nunique()} 개", "가동 중 라인 수", "purple")
+
 
 
 # =========================================================
 # 🎯 중단: 라인별 파이 + 라인별 도넛 3개
 # =========================================================
-st.markdown('<div class="section-header">━━ LINE DISTRIBUTION</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
 col_left, col_right = st.columns([1.3, 1.7])
 
@@ -596,7 +597,7 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 # =========================================================
 # 라인별 TOP + 전체 TOP
 # =========================================================
-st.markdown('<div class="section-header">━━ LINE-BY-LINE ANALYSIS</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header">━━ 라인별 상세 분석</div>', unsafe_allow_html=True)
 
 tab_all, tab_4a, tab_4b, tab_4c, tab_4x, tab_cmp = st.tabs(
     ["🌐 전체", "🅰️ 4A", "🅱️ 4B", "🅲 4C", "❎ 4X", "📊 라인 비교"]
