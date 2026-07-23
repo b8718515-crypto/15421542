@@ -106,7 +106,7 @@ st.markdown("""
 .dist-card-marker { display: none; }
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.dist-card-marker) {
-    background-color: #1A1D26;   /* ⭐ 카드 배경색 (전체 요약 카드와 동일) */
+    background-color: #1C1F26;   /* ⭐ 카드 배경색 (전체 요약 카드와 동일) */
     border: 1px solid #2A2E37;
     border-radius: 10px;
     padding: 15px;
