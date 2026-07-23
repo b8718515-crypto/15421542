@@ -525,7 +525,7 @@ with col_right:
                 fig = go.Figure(go.Pie(
                     values=[pct, 100 - pct],
                     hole=0.72,
-                    marker=dict(colors=["#00E5FF", "rgba(0,0,0,0)"]),   # ⭐ 투명으로!
+                    marker=dict(colors=[color, "#2A2E37"]),
                     showlegend=False,
                     textinfo="none",
                     sort=False,
