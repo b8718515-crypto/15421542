@@ -18,7 +18,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🎨 커스텀 CSS (다크 테마 + 청록 액센트)
+# 🎨 커스텀 CSS
 # =========================================================
 st.markdown("""
 <style>
@@ -111,7 +111,7 @@ st.markdown("""
 st.markdown("""
 <div class="dashboard-header">
     <div class="dashboard-title">🚨 알람 발생 이력 분석 대시보드</div>
-    <div class="dashboard-subtitle">라인별(대입경A/대입경B/단결정/열처리) TOP · 전체 TOP · 종합점수 기반 분석</div>
+    <div class="dashboard-subtitle">라인별(대입경A/대입경B/단결정/열처리) 발생빈도 기반 TOP 분석</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -125,7 +125,6 @@ DATA_DIR.mkdir(exist_ok=True)
 
 LINES = ["4A", "4B", "4C", "4X"]
 
-# 라인 표시용 한글 라벨
 LINE_LABELS = {
     "4A": "4라인 대입경A",
     "4B": "4라인 대입경B",
@@ -220,15 +219,6 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
     return pd.to_datetime(pd.Series([None] * len(s)), errors="coerce")
 
 
-def seconds_to_hm(total_seconds: float) -> str:
-    if pd.isna(total_seconds) or total_seconds < 0:
-        return "0시간 0분"
-    total_seconds = int(total_seconds)
-    h = total_seconds // 3600
-    m = (total_seconds % 3600) // 60
-    return f"{h:,}시간 {m}분"
-
-
 def detect_line(text: str) -> str:
     if not isinstance(text, str):
         return "미분류"
@@ -303,7 +293,7 @@ def get_file_signatures():
 
 
 # =========================================================
-# 사이드바
+# 사이드바 (가중치 슬라이더 제거)
 # =========================================================
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
@@ -369,12 +359,6 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.markdown("#### ⚙️ 종합점수 가중치")
-    w1 = st.slider("발생빈도 가중치", 0.0, 1.0, 0.5, 0.05)
-    w2 = 1.0 - w1
-    st.caption(f"지속시간(시간) 가중치: **{w2:.2f}**")
-
-    st.markdown("---")
     top_n = st.number_input("TOP N 표시", min_value=3, max_value=30, value=8, step=1)
 
 
@@ -390,7 +374,7 @@ if not signatures:
 df_raw = load_all_files(signatures)
 
 # =========================================================
-# 컬럼 자동 감지
+# 컬럼 자동 감지 (지속시간 불필요 → 알람명/발생시간만 있어도 OK)
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
@@ -403,39 +387,35 @@ def _guess(keywords, default=None):
 
 col_alarm = _guess(["알람", "Alarm", "MSG", "메시지"])
 col_start = _guess(["발생", "시작", "Start", "On"])
-col_end   = _guess(["해제", "종료", "End", "Off", "복구"])
 
 # =========================================================
 # 데이터 정제
 # =========================================================
-df = df_raw[[col_alarm, col_start, col_end, "_파일명"]].copy()
-df.columns = ["알람명", "발생시간", "해제시간", "파일명"]
+df = df_raw[[col_alarm, col_start, "_파일명"]].copy()
+df.columns = ["알람명", "발생시간", "파일명"]
 df["라인"] = df["파일명"].apply(detect_line)
 df["발생시간"] = robust_to_datetime(df["발생시간"])
-df["해제시간"] = robust_to_datetime(df["해제시간"])
-df["지속시간_초"] = (df["해제시간"] - df["발생시간"]).dt.total_seconds()
 
-df_valid = df.dropna(subset=["발생시간", "해제시간"]).copy()
-df_valid = df_valid[df_valid["지속시간_초"] > 0]
+# 알람명이 있는 행만 유효 데이터로 사용
+df_valid = df.dropna(subset=["알람명"]).copy()
+df_valid = df_valid[df_valid["알람명"].astype(str).str.strip() != ""]
 
 if len(df_valid) == 0:
-    st.error("유효한 지속시간 데이터가 없습니다.")
+    st.error("유효한 알람 데이터가 없습니다.")
     st.stop()
 
 
 # =========================================================
-# 🎯 상단 KPI 카드 (4개)  ← 누적 지속시간 제거
+# 🎯 상단 KPI 카드 (3개)
 # =========================================================
 st.markdown('<div class="section-header">━━ 전체 요약</div>', unsafe_allow_html=True)
 
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3 = st.columns(3)
 with k1:
     render_kpi_card("전체 알람", f"{len(df_valid):,} 건", "", "cyan")
 with k2:
     render_kpi_card("고유 알람", f"{df_valid['알람명'].nunique():,} 종", "", "green")
 with k3:
-    render_kpi_card("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean()), "", "orange")
-with k4:
     render_kpi_card("활성 라인", f"{df_valid['라인'].nunique()} 개", "", "purple")
 
 
@@ -502,26 +482,17 @@ with col_right:
 
 
 # =========================================================
-# 집계 & 렌더 함수
+# 🔄 집계: 발생빈도만 사용
 # =========================================================
 def build_agg(data: pd.DataFrame) -> pd.DataFrame:
     if len(data) == 0:
-        return pd.DataFrame(columns=["알람명", "발생빈도", "종합점수"])
+        return pd.DataFrame(columns=["알람명", "발생빈도", "비율(%)"])
     agg = data.groupby("알람명").agg(
         발생빈도=("알람명", "count"),
-        누적지속_초=("지속시간_초", "sum"),
     ).reset_index()
-    agg["누적지속시간_시간"] = (agg["누적지속_초"] / 3600).round(2)
-
-    def minmax(s):
-        if s.max() == s.min():
-            return pd.Series([0] * len(s), index=s.index)
-        return (s - s.min()) / (s.max() - s.min())
-
-    agg["_f"] = minmax(agg["발생빈도"])
-    agg["_d"] = minmax(agg["누적지속시간_시간"])
-    agg["종합점수"] = (agg["_f"] * w1 + agg["_d"] * w2).round(4)
-    return agg.sort_values("종합점수", ascending=False).reset_index(drop=True)
+    total = agg["발생빈도"].sum()
+    agg["비율(%)"] = (agg["발생빈도"] / total * 100).round(2)
+    return agg.sort_values("발생빈도", ascending=False).reset_index(drop=True)
 
 
 def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#00E5FF"):
@@ -532,41 +503,29 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     top_df = agg.head(top_n).copy()
     top_df.index = top_df.index + 1
 
-    # 🔄 KPI 카드 2개로 축소 (누적 지속시간 제거)
     a, b = st.columns(2)
     with a:
         render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
     with b:
         render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
 
-    st.markdown(f"#### 🏆 {title} - TOP {top_n}")
-    # 🔄 표시 컬럼에서 누적지속시간 제거
+    st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
     st.dataframe(
-        top_df[["알람명", "발생빈도", "종합점수"]],
+        top_df[["알람명", "발생빈도", "비율(%)"]],
         use_container_width=True,
     )
 
-    # 🔄 탭 2개 (누적지속시간 탭 제거)
-    t1, t2 = st.tabs(["📊 발생빈도", "⭐ 종합점수"])
-    with t1:
-        fig = px.bar(top_df.sort_values("발생빈도"),
-                     x="발생빈도", y="알람명", orientation="h",
-                     text="발생빈도",
-                     color_discrete_sequence=[accent_color])
-        fig.update_traces(textposition="outside")
-        apply_dark_theme(fig, height=450)
-        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
-    with t2:
-        fig = px.bar(top_df.sort_values("종합점수"),
-                     x="종합점수", y="알람명", orientation="h",
-                     text="종합점수",
-                     color_discrete_sequence=["#B388FF"])
-        fig.update_traces(textposition="outside")
-        apply_dark_theme(fig, height=450)
-        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_score")
+    # 발생빈도 막대 차트
+    fig = px.bar(top_df.sort_values("발생빈도"),
+                 x="발생빈도", y="알람명", orientation="h",
+                 text="발생빈도",
+                 color_discrete_sequence=[accent_color])
+    fig.update_traces(textposition="outside")
+    apply_dark_theme(fig, height=450)
+    fig.update_layout(title=f"{title} - 발생빈도 TOP {top_n}")
+    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
 
-    # 🔄 CSV도 누적지속시간 제거
-    csv = agg[["알람명", "발생빈도", "종합점수"]].to_csv(index=False).encode("utf-8-sig")
+    csv = agg[["알람명", "발생빈도", "비율(%)"]].to_csv(index=False).encode("utf-8-sig")
     st.download_button(
         f"📥 {title} 집계 CSV 다운로드",
         data=csv, file_name=f"알람_TOP_{title}.csv",
@@ -602,13 +561,11 @@ with tab_cmp:
     ).reset_index()
     line_summary["라인명"] = line_summary["라인"].map(LINE_LABELS)
 
-    # 🔄 누적/평균 지속시간 컬럼 제거
     st.dataframe(
         line_summary[["라인명", "알람건수", "고유알람수"]],
         use_container_width=True,
     )
 
-    # 🔄 알람 건수 차트만 남김 (누적지속시간 차트 제거)
     fig = px.bar(line_summary, x="라인명", y="알람건수",
                  text="알람건수", color="라인명",
                  color_discrete_map=LINE_COLORS_LABEL)
@@ -627,7 +584,6 @@ with tab_cmp:
     )
     comp["라인명"] = comp["라인"].map(LINE_LABELS)
 
-    # 🔄 발생빈도 차트만 유지 (누적지속시간 차트 제거)
     fig1 = px.bar(comp, x="알람명", y="발생빈도", color="라인명",
                   barmode="stack", color_discrete_map=LINE_COLORS_LABEL)
     fig1.update_layout(xaxis_tickangle=-30, title=f"전체 TOP {top_n} 알람 - 라인별 발생빈도")
