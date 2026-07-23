@@ -1,8 +1,7 @@
 """
 =========================================================
-  4라인 설비 알람 TOP5 대시보드 (최종본)
+  4라인 설비 알람 TOP5 대시보드 (xlsx 전용 최종본)
   - 정비팀용 · L2 알람 이력 기반
-  - 인코딩 / 구분자 / 스킵행 자동 감지
   - 발생빈도 + 누적지속시간 가중치 스코어링
 =========================================================
 """
@@ -26,62 +25,46 @@ st.title("🔧 4라인 설비 알람 TOP5 대시보드")
 st.caption("정비팀용 · L2 알람 이력 기반 · 발생빈도 + 누적지속시간 스코어링")
 
 # ─────────────────────────────────────────
-# 1. CSV 안전 로드 (인코딩 · 구분자 · 스킵행 자동 탐색)
+# 1. Excel 로더
 # ─────────────────────────────────────────
-ENCODINGS = ["utf-8-sig", "utf-8", "cp949", "euc-kr", "latin1"]
-SEPARATORS = [",", "\t", ";", "|"]
-
-
-def _try_read(source, encoding, sep, skiprows=0):
-    """단일 조합으로 CSV 읽기 시도"""
-    kwargs = dict(
-        encoding=encoding,
-        sep=sep,
-        skiprows=skiprows,
-        engine="python",       # 관대한 파서
-        on_bad_lines="skip",   # 이상한 줄 건너뜀
-    )
+@st.cache_data(show_spinner=False)
+def read_excel_safe(source, name: str = "") -> dict:
+    """
+    xlsx 파일을 읽어 모든 시트를 dict{시트명: DataFrame} 로 반환.
+    파일 경로(str/Path) 또는 업로드 객체 모두 지원.
+    """
     if isinstance(source, (str, Path)):
-        return pd.read_csv(source, **kwargs)
-    return pd.read_csv(io.BytesIO(source), **kwargs)
-
-
-def read_csv_safe(source, name: str = "") -> pd.DataFrame:
-    """
-    인코딩 + 구분자 + 스킵행 조합을 자동 탐색.
-    가장 컬럼 수가 많은(=제대로 파싱된) 결과를 채택.
-    """
-    raw = None
-    if not isinstance(source, (str, Path)):
+        with open(source, "rb") as f:
+            raw = f.read()
+    else:
         raw = source.read()
 
-    best_df = None
-    best_info = ""
+    # 시그니처 체크 (xlsx는 ZIP 기반이므로 'PK'로 시작)
+    if raw[:2] != b"PK":
+        raise ValueError(
+            f"{name}: xlsx 파일이 아닙니다. (앞 4바이트: {raw[:4]!r})"
+        )
 
-    for enc in ENCODINGS:
-        for sep in SEPARATORS:
-            for skip in range(0, 10):
-                try:
-                    target = raw if raw is not None else source
-                    df = _try_read(target, enc, sep, skip)
-                    if df.shape[1] >= 2 and len(df) >= 3:
-                        if best_df is None or df.shape[1] > best_df.shape[1]:
-                            best_df = df
-                            best_info = (
-                                f"enc={enc}, sep={repr(sep)}, skiprows={skip}"
-                            )
-                except Exception:
-                    continue
+    # 모든 시트 로드
+    sheets = pd.read_excel(
+        io.BytesIO(raw),
+        engine="openpyxl",
+        sheet_name=None,   # None = 모든 시트
+    )
+    return sheets
 
-    if best_df is None:
-        raise ValueError(f"{name} 파일 형식을 인식할 수 없습니다.")
 
-    st.sidebar.caption(f"📌 {name} → {best_info}")
-    return best_df
+def pick_main_sheet(sheets: dict) -> tuple[str, pd.DataFrame]:
+    """가장 행 수가 많은 시트를 대표 시트로 선정"""
+    best_name, best_df = None, None
+    for sname, sdf in sheets.items():
+        if best_df is None or len(sdf) > len(best_df):
+            best_name, best_df = sname, sdf
+    return best_name, best_df
 
 
 # ─────────────────────────────────────────
-# 2. 사이드바 - 데이터 소스 선택
+# 2. 사이드바 - 데이터 소스
 # ─────────────────────────────────────────
 st.sidebar.header("📁 데이터 소스")
 
@@ -90,51 +73,51 @@ data_source = st.sidebar.radio(
     ["data/ 폴더에서 자동 로드", "직접 업로드"],
 )
 
-TARGET_FILES = ["4A.csv", "4B.csv", "4C.csv", "4X.csv"]
-dfs: dict[str, pd.DataFrame] = {}
+# 파일별 원본 시트 dict 저장
+raw_sheets: dict[str, dict] = {}
 
-# ① data/ 폴더에서 자동 로드
 if data_source == "data/ 폴더에서 자동 로드":
     data_dir = Path("data")
     if not data_dir.exists():
         st.warning("⚠️ 저장소 루트에 `data/` 폴더가 없습니다.")
     else:
-        for fname in TARGET_FILES:
-            fpath = data_dir / fname
-            if not fpath.exists():
-                st.sidebar.warning(f"⚠️ {fname} 없음")
-                continue
+        excel_files = sorted(data_dir.glob("*.xlsx"))
+        # 확장자만 .csv로 되어있을 수 있으니 .csv도 시도
+        excel_files += sorted(data_dir.glob("*.csv"))
+
+        if not excel_files:
+            st.sidebar.warning("⚠️ data/ 폴더에 파일이 없습니다.")
+
+        for fpath in excel_files:
             try:
-                dfs[fname] = read_csv_safe(fpath, fname)
+                sheets = read_excel_safe(fpath, fpath.name)
+                raw_sheets[fpath.name] = sheets
                 st.sidebar.success(
-                    f"✅ {fname} ({len(dfs[fname])}행 × {dfs[fname].shape[1]}열)"
+                    f"✅ {fpath.name} (시트 {len(sheets)}개)"
                 )
             except Exception as e:
-                st.sidebar.error(f"❌ {fname}: {e}")
+                st.sidebar.error(f"❌ {fpath.name}: {e}")
 
-# ② 직접 업로드
 else:
     uploaded_files = st.sidebar.file_uploader(
-        "CSV 업로드 (여러 개 가능)",
-        type=["csv", "txt"],
+        "xlsx 업로드 (여러 개 가능)",
+        type=["xlsx", "csv"],
         accept_multiple_files=True,
     )
     if uploaded_files:
         for uf in uploaded_files:
             try:
-                dfs[uf.name] = read_csv_safe(uf, uf.name)
-                st.sidebar.success(
-                    f"✅ {uf.name} ({len(dfs[uf.name])}행 × {dfs[uf.name].shape[1]}열)"
-                )
+                sheets = read_excel_safe(uf, uf.name)
+                raw_sheets[uf.name] = sheets
+                st.sidebar.success(f"✅ {uf.name} (시트 {len(sheets)}개)")
             except Exception as e:
                 st.sidebar.error(f"❌ {uf.name}: {e}")
 
-# 데이터 없으면 안내 후 종료
-if not dfs:
+if not raw_sheets:
     st.info(
         "📌 데이터가 없습니다.\n\n"
-        "- 사이드바에서 CSV를 업로드하거나\n"
-        "- 저장소 루트의 `data/` 폴더에 `4A.csv`, `4B.csv`, `4C.csv`, `4X.csv` 를 두세요."
+        "- 사이드바에서 xlsx 파일을 업로드하거나\n"
+        "- 저장소 루트의 `data/` 폴더에 `4A.xlsx`, `4B.xlsx`, `4C.xlsx`, `4X.xlsx` 를 두세요."
     )
     st.stop()
 
@@ -149,10 +132,20 @@ w_duration = 1.0 - w_count
 st.sidebar.caption(f"누적지속시간 가중치: **{w_duration:.1f}**")
 
 # ─────────────────────────────────────────
-# 4. 컬럼 자동 매핑 & 분석 로직
+# 4. 컬럼 자동 매핑 & 분석
 # ─────────────────────────────────────────
+ALARM_KEYWORDS = [
+    "alarm", "알람", "message", "메시지", "msg",
+    "code", "코드", "설명", "description", "desc",
+    "event", "이벤트", "fault", "결함", "이상",
+]
+DURATION_KEYWORDS = [
+    "duration", "지속", "elapsed", "time", "시간", "sec", "min",
+]
+
+
 def guess_column(df: pd.DataFrame, keywords: list) -> str | None:
-    """컬럼명에 키워드가 포함된 첫 번째 컬럼 반환"""
+    """컬럼명 부분일치로 첫 매칭 컬럼 반환"""
     for col in df.columns:
         low = str(col).lower().replace(" ", "")
         for kw in keywords:
@@ -161,26 +154,28 @@ def guess_column(df: pd.DataFrame, keywords: list) -> str | None:
     return None
 
 
-def analyze(df: pd.DataFrame) -> pd.DataFrame:
-    """알람명 기준으로 발생빈도·누적지속시간 집계 후 스코어링"""
-    alarm_col = guess_column(
-        df, ["alarm", "알람", "message", "메시지", "code", "코드", "설명"]
-    )
-    dur_col = guess_column(
-        df, ["duration", "지속", "elapsed", "time", "시간"]
-    )
-
-    if alarm_col is None:
-        return pd.DataFrame()
+def analyze(
+    df: pd.DataFrame,
+    alarm_col: str,
+    dur_col: str | None,
+) -> pd.DataFrame:
+    """알람별 발생빈도·누적지속시간 집계 후 스코어링"""
+    df = df.copy()
+    df[alarm_col] = df[alarm_col].astype(str).str.strip()
+    df = df[df[alarm_col].str.len() > 0]
+    df = df[df[alarm_col].str.lower() != "nan"]
 
     if dur_col is not None:
         df[dur_col] = pd.to_numeric(df[dur_col], errors="coerce").fillna(0)
 
-    # 발생빈도
-    grouped = df.groupby(alarm_col).size().reset_index(name="발생빈도")
-    grouped = grouped.rename(columns={alarm_col: "알람"})
+    # 집계
+    grouped = (
+        df.groupby(alarm_col)
+        .size()
+        .reset_index(name="발생빈도")
+        .rename(columns={alarm_col: "알람"})
+    )
 
-    # 누적지속시간
     if dur_col is not None:
         dur_sum = (
             df.groupby(alarm_col)[dur_col]
@@ -208,35 +203,77 @@ def analyze(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────
-# 5. 라인별 탭 화면
+# 5. 라인별 탭
 # ─────────────────────────────────────────
-tabs = st.tabs([f"📊 {name}" for name in dfs.keys()])
+tabs = st.tabs([f"📊 {name}" for name in raw_sheets.keys()])
 
-for tab, (name, df) in zip(tabs, dfs.items()):
+for tab, (fname, sheets) in zip(tabs, raw_sheets.items()):
     with tab:
-        st.subheader(f"📊 {name} — 총 {len(df):,}건 · {df.shape[1]}개 컬럼")
+        # 시트 선택
+        sheet_names = list(sheets.keys())
+        default_sheet, _ = pick_main_sheet(sheets)
+
+        col_a, col_b = st.columns([1, 3])
+        with col_a:
+            sel_sheet = st.selectbox(
+                "시트 선택",
+                sheet_names,
+                index=sheet_names.index(default_sheet),
+                key=f"sheet_{fname}",
+            )
+
+        df = sheets[sel_sheet]
+        st.subheader(f"📊 {fname} · [{sel_sheet}] — {len(df):,}행 × {df.shape[1]}열")
 
         # 원본 미리보기
         with st.expander("🔍 원본 데이터 미리보기 (상위 20행)"):
             st.dataframe(df.head(20), use_container_width=True)
             st.write("**컬럼 목록:**", list(df.columns))
 
+        # 컬럼 자동 추정 + 수동 지정 UI
+        auto_alarm = guess_column(df, ALARM_KEYWORDS)
+        auto_dur = guess_column(df, DURATION_KEYWORDS)
+        cols = list(df.columns)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            alarm_col = st.selectbox(
+                "🚨 알람(그룹핑) 컬럼",
+                cols,
+                index=cols.index(auto_alarm) if auto_alarm in cols else 0,
+                key=f"alarm_{fname}",
+            )
+        with c2:
+            dur_options = ["(사용 안 함)"] + cols
+            dur_idx = (
+                dur_options.index(auto_dur) if auto_dur in cols else 0
+            )
+            dur_sel = st.selectbox(
+                "⏱️ 지속시간(숫자) 컬럼",
+                dur_options,
+                index=dur_idx,
+                key=f"dur_{fname}",
+            )
+            dur_col = None if dur_sel == "(사용 안 함)" else dur_sel
+
         # 분석
-        result = analyze(df.copy())
+        try:
+            result = analyze(df, alarm_col, dur_col)
+        except Exception as e:
+            st.error(f"분석 중 오류: {e}")
+            continue
 
         if result.empty:
-            st.warning(
-                "⚠️ 알람 관련 컬럼을 찾지 못했습니다. 위 컬럼 목록을 확인해주세요."
-            )
+            st.warning("⚠️ 집계 결과가 없습니다. 컬럼 선택을 확인해주세요.")
             continue
 
         top = result.head(top_n)
 
         # KPI 카드
-        c1, c2, c3 = st.columns(3)
-        c1.metric("알람 종류", f"{len(result):,}")
-        c2.metric("총 발생 건수", f"{int(result['발생빈도'].sum()):,}")
-        c3.metric("총 누적지속시간", f"{int(result['누적지속시간'].sum()):,}")
+        k1, k2, k3 = st.columns(3)
+        k1.metric("알람 종류", f"{len(result):,}")
+        k2.metric("총 발생 건수", f"{int(result['발생빈도'].sum()):,}")
+        k3.metric("총 누적지속시간", f"{result['누적지속시간'].sum():,.0f}")
 
         # TOP N 표
         st.markdown(f"### 🏆 TOP {top_n} 알람")
@@ -250,12 +287,13 @@ for tab, (name, df) in zip(tabs, dfs.items()):
         st.markdown("### 📈 종합점수 차트")
         st.bar_chart(top.set_index("알람")[["종합점수"]])
 
-        # 다운로드 버튼
+        # 다운로드
         csv_bytes = top.to_csv(index=False).encode("utf-8-sig")
+        base_name = fname.rsplit(".", 1)[0]
         st.download_button(
-            label=f"⬇️ {name} TOP{top_n} 결과 다운로드 (CSV)",
+            label=f"⬇️ {base_name} TOP{top_n} 결과 다운로드 (CSV)",
             data=csv_bytes,
-            file_name=f"{name.replace('.csv', '')}_TOP{top_n}.csv",
+            file_name=f"{base_name}_{sel_sheet}_TOP{top_n}.csv",
             mime="text/csv",
         )
 
