@@ -106,23 +106,40 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    /* 탭 라운드 */
+    /* ✨ 탭 라운드 - 고급화 */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
+        gap: 6px;
         background-color: #1C1F26;
-        padding: 6px;
+        padding: 8px;
         border-radius: 14px;
+        border: 1px solid #2A2E37;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
         color: #8B92A0;
         border-radius: 10px;
-        padding: 8px 16px;
+        padding: 10px 20px;
+        transition: all 0.25s ease;
+        font-weight: 500;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(0, 229, 255, 0.08);
+        color: #FAFAFA;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #00E5FF !important;
+        background: linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%) !important;
         color: #0E1117 !important;
-        font-weight: 700;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 12px rgba(0, 229, 255, 0.35),
+                    0 0 0 1px rgba(0, 229, 255, 0.2);
+        transform: translateY(-1px);
+    }
+    /* 탭 하이라이트 밑줄 제거 */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: transparent !important;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        background-color: transparent !important;
     }
     
     /* 데이터프레임 라운드 */
@@ -146,6 +163,28 @@ st.markdown("""
     /* 파일 업로더 라운드 */
     .stFileUploader > div {
         border-radius: 14px;
+    }
+    
+    /* ✨ 라인별 비율 미니 도넛 카드 */
+    .mini-donut-card {
+        background-color: #1C1F26;
+        border-radius: 16px;
+        padding: 14px 12px 24px 12px;
+        border: 1px solid #2A2E37;
+        margin-bottom: 8px;
+    }
+    .mini-donut-label {
+        text-align: center;
+        font-weight: 700;
+        font-size: 13px;
+        margin-top: 10px;
+    }
+    .mini-donut-sub {
+        text-align: center;
+        color: #8B92A0;
+        font-size: 12px;
+        margin-top: 6px;
+        padding-bottom: 8px;
     }
     
     hr { border-color: #2A2E37; }
@@ -365,7 +404,7 @@ def get_file_signatures():
 
 
 # =========================================================
-# 사이드바 (가중치 슬라이더 제거)
+# 사이드바
 # =========================================================
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
@@ -446,7 +485,7 @@ if not signatures:
 df_raw = load_all_files(signatures)
 
 # =========================================================
-# 컬럼 자동 감지 (지속시간 불필요 → 알람명/발생시간만 있어도 OK)
+# 컬럼 자동 감지
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
@@ -468,7 +507,6 @@ df.columns = ["알람명", "발생시간", "파일명"]
 df["라인"] = df["파일명"].apply(detect_line)
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 
-# 알람명이 있는 행만 유효 데이터로 사용
 df_valid = df.dropna(subset=["알람명"]).copy()
 df_valid = df_valid[df_valid["알람명"].astype(str).str.strip() != ""]
 
@@ -538,23 +576,31 @@ with col_right:
                 textinfo="none",
                 sort=False,
             ))
+            # ✨ 상하 여백 균등하게 (t=20, b=20)
             fig.update_layout(
                 paper_bgcolor="#1C1F26",
-                height=180,
-                margin=dict(l=0, r=0, t=10, b=0),
+                plot_bgcolor="#1C1F26",
+                height=200,
+                margin=dict(l=10, r=10, t=20, b=20),
                 annotations=[dict(text=f"<b>{pct}%</b>",
                                   font=dict(size=18, color="white"), showarrow=False)],
             )
+            
+            # ✨ 미니 도넛 카드 컨테이너 시작 (하단 여백 확대)
+            st.markdown('<div class="mini-donut-card">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
             st.markdown(
-                f"<center><span style='color:{color};font-weight:600;font-size:12px;'>{line_label}</span>"
-                f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
+                f"""
+                <div class="mini-donut-label" style="color:{color};">{line_label}</div>
+                <div class="mini-donut-sub">{row['건수']:,} 건</div>
+                """,
                 unsafe_allow_html=True
             )
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
-# 🔄 집계: 발생빈도만 사용
+# 🔄 집계
 # =========================================================
 def build_agg(data: pd.DataFrame) -> pd.DataFrame:
     if len(data) == 0:
@@ -575,7 +621,6 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     top_df = agg.head(top_n).copy()
     top_df.index = top_df.index + 1
 
-    # ✅ 작은 KPI 카드로 변경
     a, b = st.columns(2)
     with a:
         render_kpi_card_sm("알람 건수", f"{len(data):,} 건", "cyan")
@@ -594,8 +639,20 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
                  text="발생빈도",
                  color_discrete_sequence=[accent_color])
     fig.update_traces(textposition="outside")
-    apply_dark_theme(fig, height=450)
-    fig.update_layout(title=f"{title} - 발생빈도 TOP {top_n}")
+    apply_dark_theme(fig, height=480)
+    
+    # ✨ 제목을 오른쪽 아래로 이동 (구석 X, 여백 있음)
+    fig.update_layout(
+        title=dict(
+            text=f"{title} - 발생빈도 TOP {top_n}",
+            x=0.92,           # 오른쪽에서 약간 안쪽
+            xanchor="right",
+            y=0.05,           # 아래쪽에서 약간 위
+            yanchor="bottom",
+            font=dict(size=13, color="#8B92A0"),
+        ),
+        margin=dict(l=40, r=60, t=40, b=70),  # 하단·우측 여백 확대
+    )
     st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
 
     csv = agg[["알람명", "발생빈도", "비율(%)"]].to_csv(index=False).encode("utf-8-sig")
