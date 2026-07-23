@@ -254,19 +254,19 @@ if not signatures:
 
 df_raw = load_all_files(signatures)
 
-st.subheader("📁 현재 분석 중인 파일")
-info_df = pd.DataFrame(
-    [(n, f"{s/1024:,.0f} KB") for n, _, s in signatures],
-    columns=["파일명", "크기"],
-)
-st.dataframe(info_df, use_container_width=True)
-st.success(f"✅ 총 **{len(signatures)}개 파일** · **{len(df_raw):,} 행** 분석 중")
+# ❌ 삭제 (또는 주석)
+# st.subheader("📁 현재 분석 중인 파일")
+# info_df = pd.DataFrame(
+#     [(n, f"{s/1024:,.0f} KB") for n, _, s in signatures],
+#     columns=["파일명", "크기"],
+# )
+# st.dataframe(info_df, use_container_width=True)
+# st.success(f"✅ 총 **{len(signatures)}개 파일** · **{len(df_raw):,} 행** 분석 중")
 
 
 # =========================================================
-# 컬럼 매핑
+# 컬럼 자동 매핑 (UI 숨김)
 # =========================================================
-st.subheader("🔧 컬럼 매핑")
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
 def guess(name_candidates):
@@ -276,22 +276,11 @@ def guess(name_candidates):
                 return c
     return cols[0]
 
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    g = guess(["알람", "Alarm", "MSG"])
-    col_alarm = st.selectbox("알람명 컬럼", cols,
-                             index=cols.index(g) if g in cols else 0)
-with c2:
-    g = guess(["발생", "시작", "Start", "On"])
-    col_start = st.selectbox("발생시간 컬럼", cols,
-                             index=cols.index(g) if g in cols else 0)
-with c3:
-    g = guess(["해제", "종료", "End", "Off", "복구"])
-    col_end = st.selectbox("해제시간 컬럼", cols,
-                           index=cols.index(g) if g in cols else 0)
-with c4:
-    line_source_options = ["(자동 감지 - 파일명)", "(자동 감지 - 알람명)"] + cols
-    line_src = st.selectbox("라인 컬럼", line_source_options, index=0)
+col_alarm = guess(["알람", "Alarm", "MSG"])
+col_start = guess(["발생", "시작", "Start", "On"])
+col_end   = guess(["해제", "종료", "End", "Off", "복구"])
+line_src  = "(자동 감지 - 파일명)"   # 기본값 고정
+
 
 
 # =========================================================
