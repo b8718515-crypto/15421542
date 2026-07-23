@@ -272,39 +272,27 @@ st.success(f"✅ 총 **{len(signatures)}개 파일** · **{len(df_raw):,} 행** 
 
 
 # =========================================================
-# 컬럼 매핑
-# 컬럼 자동 매핑 (UI 숨김)
+# 📌 내부 처리 (UI 숨김)
+#   - 파일 정보 / 컬럼 매핑 / 라인 감지 결과 / 디버그 UI 숨김
+#   - 컬럼은 자동 감지, 라인은 파일명으로 자동 분류
 # =========================================================
-st.subheader("🔧 컬럼 매핑")
+
+# --- 컬럼 자동 매핑 ---
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
-def guess(name_candidates):
+def _guess(keywords, default=None):
+    """컬럼명에 keywords 중 하나라도 포함되면 해당 컬럼 반환"""
     for c in cols:
-        for k in name_candidates:
+        for k in keywords:
             if k in str(c):
                 return c
-    return cols[0]
+    return default if default is not None else (cols[0] if cols else None)
 
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    g = guess(["알람", "Alarm", "MSG"])
-    col_alarm = st.selectbox("알람명 컬럼", cols,
-                             index=cols.index(g) if g in cols else 0)
-with c2:
-    g = guess(["발생", "시작", "Start", "On"])
-    col_start = st.selectbox("발생시간 컬럼", cols,
-                             index=cols.index(g) if g in cols else 0)
-with c3:
-    g = guess(["해제", "종료", "End", "Off", "복구"])
-    col_end = st.selectbox("해제시간 컬럼", cols,
-                           index=cols.index(g) if g in cols else 0)
-with c4:
-    line_source_options = ["(자동 감지 - 파일명)", "(자동 감지 - 알람명)"] + cols
-    line_src = st.selectbox("라인 컬럼", line_source_options, index=0)
-col_alarm = guess(["알람", "Alarm", "MSG"])
-col_start = guess(["발생", "시작", "Start", "On"])
-col_end   = guess(["해제", "종료", "End", "Off", "복구"])
-line_src  = "(자동 감지 - 파일명)"   # 기본값 고정
+col_alarm = _guess(["알람", "Alarm", "MSG", "메시지"])
+col_start = _guess(["발생", "시작", "Start", "On"])
+col_end   = _guess(["해제", "종료", "End", "Off", "복구"])
+line_src  = "(자동 감지 - 파일명)"
+
 
 
 
