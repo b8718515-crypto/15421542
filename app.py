@@ -535,7 +535,7 @@ with col_right:
                 fig.update_layout(
     paper_bgcolor="#0E1117",   # ← 카드 배경과 동일한 회색 ⭐
     plot_bgcolor="#0E1117",    # ← 카드 배경과 동일한 회색 ⭐
-                    height=340,
+                    height=345,
                     margin=dict(l=5, r=5, t=20, b=5),
                     annotations=[dict(
                         text=f"<b>{pct}%</b>",
