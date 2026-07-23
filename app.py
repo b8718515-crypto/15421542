@@ -1,155 +1,231 @@
-"""4라인 설비 알람 TOP5 대시보드 (정비팀용)"""
-import streamlit as st
+"""
+4라인 설비 알람 TOP5 대시보드
+- 정비팀용 · L2 알람 이력 기반
+- 발생빈도 + 누적지속시간 스코어링
+"""
+
+import io
+from pathlib import Path
+
 import pandas as pd
-import plotly.express as px
+import streamlit as st
 
-from src.data_loader import load_all_alarms, load_alarm_file, filter_data
-from src.analyzer import compute_top5, hourly_trend
-from src.report import to_excel, to_pdf
-
-st.set_page_config(page_title="4라인 알람 TOP5", page_icon="🔧", layout="wide")
+# ─────────────────────────────────────────
+# 페이지 기본 설정
+# ─────────────────────────────────────────
+st.set_page_config(
+    page_title="4라인 설비 알람 TOP5 대시보드",
+    page_icon="🔧",
+    layout="wide",
+)
 
 st.title("🔧 4라인 설비 알람 TOP5 대시보드")
 st.caption("정비팀용 · L2 알람 이력 기반 · 발생빈도 + 누적지속시간 스코어링")
 
-# ─── 데이터 로드 ───
-st.sidebar.header("📁 데이터")
-uploaded_files = st.sidebar.file_uploader(
-    "알람 CSV 업로드 (4A, 4B, 4C, 4X)",
-    type=["csv"],
-    accept_multiple_files=True,
+# ─────────────────────────────────────────
+# CSV 안전 로드 함수 (인코딩 자동 감지)
+# ─────────────────────────────────────────
+ENCODINGS = ["utf-8-sig", "utf-8", "cp949", "euc-kr", "latin1"]
+
+
+def read_csv_safe(source, name: str = "") -> pd.DataFrame:
+    """여러 인코딩을 순서대로 시도해서 CSV 로드"""
+    # 파일 경로인 경우
+    if isinstance(source, (str, Path)):
+        for enc in ENCODINGS:
+            try:
+                return pd.read_csv(source, encoding=enc)
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                raise RuntimeError(f"{name} 읽기 오류: {e}")
+        raise UnicodeDecodeError("all", b"", 0, 1, f"{name} 인코딩 인식 실패")
+
+    # 업로드된 파일(BytesIO)인 경우
+    raw = source.read()
+    for enc in ENCODINGS:
+        try:
+            return pd.read_csv(io.BytesIO(raw), encoding=enc)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError("all", b"", 0, 1, f"{name} 인코딩 인식 실패")
+
+
+# ─────────────────────────────────────────
+# 사이드바 - 데이터 소스 선택
+# ─────────────────────────────────────────
+st.sidebar.header("📁 데이터 소스")
+
+data_source = st.sidebar.radio(
+    "데이터를 어디서 불러올까요?",
+    ["data/ 폴더에서 자동 로드", "직접 업로드"],
 )
 
-if uploaded_files:
-    dfs = []
-    for f in uploaded_files:
-        try:
-            tmp = load_alarm_file(f, source_name=f.name.replace(".csv", ""))
-            dfs.append(tmp)
-        except Exception as e:
-            st.warning(f"{f.name} 로드 실패: {e}")
-    df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
-else:
-    df = load_all_alarms("data")
+TARGET_FILES = ["4A.csv", "4B.csv", "4C.csv", "4X.csv"]
+dfs: dict[str, pd.DataFrame] = {}
 
-if df.empty:
-    st.error("데이터가 없습니다. 사이드바에서 CSV를 업로드하거나 `data/` 폴더에 파일을 두세요.")
+# ─────────────────────────────────────────
+# ① data/ 폴더에서 자동 로드
+# ─────────────────────────────────────────
+if data_source == "data/ 폴더에서 자동 로드":
+    data_dir = Path("data")
+
+    if not data_dir.exists():
+        st.warning("⚠️ `data/` 폴더가 없습니다. 저장소 루트에 `data/` 폴더를 만들고 CSV를 넣어주세요.")
+    else:
+        for fname in TARGET_FILES:
+            fpath = data_dir / fname
+            if not fpath.exists():
+                st.sidebar.warning(f"⚠️ {fname} 없음")
+                continue
+            try:
+                dfs[fname] = read_csv_safe(fpath, fname)
+                st.sidebar.success(f"✅ {fname} 로드 ({len(dfs[fname])}행)")
+            except Exception as e:
+                st.sidebar.error(f"❌ {fname}: {e}")
+
+# ─────────────────────────────────────────
+# ② 직접 업로드
+# ─────────────────────────────────────────
+else:
+    uploaded_files = st.sidebar.file_uploader(
+        "CSV 파일 업로드 (여러 개 가능)",
+        type="csv",
+        accept_multiple_files=True,
+    )
+    if uploaded_files:
+        for uf in uploaded_files:
+            try:
+                dfs[uf.name] = read_csv_safe(uf, uf.name)
+                st.sidebar.success(f"✅ {uf.name} 로드 ({len(dfs[uf.name])}행)")
+            except Exception as e:
+                st.sidebar.error(f"❌ {uf.name}: {e}")
+
+# ─────────────────────────────────────────
+# 데이터가 없으면 안내 후 종료
+# ─────────────────────────────────────────
+if not dfs:
+    st.info(
+        "📌 데이터가 없습니다.\n\n"
+        "- 사이드바에서 CSV를 업로드하거나\n"
+        "- 저장소 루트의 `data/` 폴더에 `4A.csv`, `4B.csv`, `4C.csv`, `4X.csv` 를 두세요."
+    )
     st.stop()
 
-# ─── 필터 ───
-st.sidebar.header("🔎 필터")
-line_options = ["전체"] + sorted(df["line_name"].dropna().unique().tolist())
-line_sel = st.sidebar.selectbox("공정라인명", line_options)
+# ─────────────────────────────────────────
+# 분석 파라미터 (사이드바)
+# ─────────────────────────────────────────
+st.sidebar.header("⚙️ 분석 설정")
 
-eq_pool = df if line_sel == "전체" else df[df["line_name"] == line_sel]
-eq_options = ["전체"] + sorted(eq_pool["equipment_group"].dropna().unique().tolist())
-eq_sel = st.sidebar.selectbox("설비중분류", eq_options)
+top_n = st.sidebar.slider("TOP N", min_value=3, max_value=20, value=5)
+w_count = st.sidebar.slider("발생빈도 가중치", 0.0, 1.0, 0.5, 0.1)
+w_duration = 1.0 - w_count
+st.sidebar.caption(f"누적지속시간 가중치: **{w_duration:.1f}**")
 
-date_min = df["start_time"].min().date()
-date_max = df["start_time"].max().date()
-target_date = st.sidebar.date_input(
-    "조회일자 (1일 기준)",
-    value=date_max,
-    min_value=date_min,
-    max_value=date_max,
-)
+# ─────────────────────────────────────────
+# 컬럼 자동 매핑 (데이터 스키마가 달라도 유연 대응)
+# ─────────────────────────────────────────
+def guess_column(df: pd.DataFrame, keywords: list[str]) -> str | None:
+    for col in df.columns:
+        col_low = str(col).lower().replace(" ", "")
+        for kw in keywords:
+            if kw.lower() in col_low:
+                return col
+    return None
 
-st.sidebar.header("⚖️ 스코어 가중치")
-w_freq = st.sidebar.slider("발생빈도 가중치", 0.0, 1.0, 0.5, 0.1)
-w_dur = round(1.0 - w_freq, 2)
-st.sidebar.caption(f"누적지속시간 가중치: **{w_dur}**")
 
-# ─── 필터링 ───
-filtered = filter_data(df, line_sel, eq_sel, target_date)
+def analyze(df: pd.DataFrame) -> pd.DataFrame:
+    """알람명 기준으로 발생빈도·누적지속시간 집계 후 스코어링"""
+    alarm_col = guess_column(df, ["alarm", "알람", "message", "메시지", "code", "코드"])
+    dur_col = guess_column(df, ["duration", "지속", "elapsed", "time"])
 
-# ─── KPI ───
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("총 알람 건수", f"{len(filtered):,} 건")
-col2.metric("설비중분류 종류", f"{filtered['equipment_group'].nunique()} 종")
-col3.metric("총 지속시간(분)", f"{filtered['duration_sec'].sum()/60:,.1f}")
-avg_dur = filtered['duration_sec'].mean() if len(filtered) else 0
-col4.metric("평균 지속시간(초)", f"{avg_dur:,.1f}")
+    if alarm_col is None:
+        return pd.DataFrame()
 
-st.divider()
+    agg_dict = {alarm_col: "count"}
+    if dur_col is not None:
+        # 지속시간이 문자열일 수도 있으니 숫자로 변환
+        df[dur_col] = pd.to_numeric(df[dur_col], errors="coerce").fillna(0)
+        agg_dict[dur_col] = "sum"
 
-# ─── TOP5 ───
-st.subheader(f"🏆 TOP 5 설비중분류 알람 ({target_date})")
-top5 = compute_top5(filtered, w_freq=w_freq, w_dur=w_dur, top_n=5)
-
-if top5.empty:
-    st.warning("해당 조건에 데이터가 없습니다.")
-else:
-    display = top5[[
-        "equipment_group", "freq", "total_duration_min",
-        "max_duration_min", "score"
-    ]].copy()
-    display.columns = ["설비중분류", "발생빈도", "누적시간(분)", "최대지속(분)", "스코어"]
-    display.index = display.index + 1
-    display.index.name = "순위"
-
-    st.dataframe(
-        display.style.format({
-            "스코어": "{:.3f}",
-            "누적시간(분)": "{:.1f}",
-            "최대지속(분)": "{:.1f}",
-        }),
-        use_container_width=True,
+    grouped = (
+        df.groupby(alarm_col)
+        .agg(발생빈도=(alarm_col, "count"),
+             누적지속시간=(dur_col, "sum") if dur_col else (alarm_col, "count"))
+        .reset_index()
+        .rename(columns={alarm_col: "알람"})
     )
 
-    # ─── 차트 ───
-    c1, c2 = st.columns(2)
-    with c1:
-        fig1 = px.bar(
-            top5, x="equipment_group", y="freq",
-            title="발생 빈도 (건)",
-            labels={"equipment_group": "설비중분류", "freq": "발생 건수"},
-            color="freq", color_continuous_scale="Blues",
-        )
-        st.plotly_chart(fig1, use_container_width=True)
-    with c2:
-        fig2 = px.bar(
-            top5, x="equipment_group", y="total_duration_min",
-            title="누적 지속시간 (분)",
-            labels={"equipment_group": "설비중분류", "total_duration_min": "누적 분"},
-            color="total_duration_min", color_continuous_scale="Reds",
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+    if dur_col is None:
+        grouped["누적지속시간"] = 0
 
-    # ─── 시간대별 추이 ───
-    st.subheader("📈 시간대별 발생 추이 (0~23시)")
-    trend = hourly_trend(filtered)
-    if not trend.empty:
-        fig3 = px.line(trend, x="hour", y="count", markers=True,
-                       labels={"hour": "시간대", "count": "발생 건수"})
-        fig3.update_xaxes(dtick=1)
-        st.plotly_chart(fig3, use_container_width=True)
+    # 정규화 후 스코어 계산 (0~1 → 100점 만점)
+    def norm(s: pd.Series) -> pd.Series:
+        if s.max() == s.min():
+            return pd.Series([0] * len(s), index=s.index)
+        return (s - s.min()) / (s.max() - s.min())
 
-    # ─── 원본 이력 ───
-    with st.expander("📋 필터된 원본 알람 이력 보기"):
-        show_cols = ["start_time", "end_time", "duration_str",
-                     "line_name", "equipment_group", "source"]
-        show_cols = [c for c in show_cols if c in filtered.columns]
+    grouped["빈도점수"] = norm(grouped["발생빈도"])
+    grouped["지속점수"] = norm(grouped["누적지속시간"])
+    grouped["종합점수"] = (
+        w_count * grouped["빈도점수"] + w_duration * grouped["지속점수"]
+    ) * 100
+    grouped["종합점수"] = grouped["종합점수"].round(1)
+
+    return grouped.sort_values("종합점수", ascending=False).reset_index(drop=True)
+
+
+# ─────────────────────────────────────────
+# 라인별 탭
+# ─────────────────────────────────────────
+tabs = st.tabs([f"📊 {name}" for name in dfs.keys()])
+
+for tab, (name, df) in zip(tabs, dfs.items()):
+    with tab:
+        st.subheader(f"📊 {name} — 총 {len(df):,}건")
+
+        with st.expander("🔍 원본 데이터 미리보기 (상위 20행)"):
+            st.dataframe(df.head(20), use_container_width=True)
+
+        result = analyze(df.copy())
+
+        if result.empty:
+            st.warning("⚠️ 알람 관련 컬럼을 찾지 못했습니다. 컬럼명을 확인해주세요.")
+            st.write("**현재 컬럼:**", list(df.columns))
+            continue
+
+        top = result.head(top_n)
+
+        # KPI
+        c1, c2, c3 = st.columns(3)
+        c1.metric("전체 알람 종류", f"{len(result):,}")
+        c2.metric("총 발생 건수", f"{int(result['발생빈도'].sum()):,}")
+        c3.metric("총 누적지속시간", f"{int(result['누적지속시간'].sum()):,}")
+
+        # TOP N 표
+        st.markdown(f"### 🏆 TOP {top_n} 알람")
         st.dataframe(
-            filtered[show_cols].sort_values("start_time", ascending=False),
-            use_container_width=True, height=400,
+            top[["알람", "발생빈도", "누적지속시간", "종합점수"]],
+            use_container_width=True,
+            hide_index=True,
         )
 
-    # ─── 다운로드 ───
-    st.divider()
-    st.subheader("📥 리포트 다운로드")
-    d1, d2 = st.columns(2)
-    report_df = display.reset_index()
-    with d1:
+        # 차트
+        st.markdown("### 📈 종합점수 차트")
+        chart_df = top.set_index("알람")[["종합점수"]]
+        st.bar_chart(chart_df)
+
+        # 다운로드
+        csv_bytes = top.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            "📊 Excel 다운로드",
-            data=to_excel(report_df),
-            file_name=f"alarm_top5_{target_date}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            label=f"⬇️ {name} TOP{top_n} 결과 다운로드 (CSV)",
+            data=csv_bytes,
+            file_name=f"{name.replace('.csv', '')}_TOP{top_n}.csv",
+            mime="text/csv",
         )
-    with d2:
-        st.download_button(
-            "📄 PDF 다운로드",
-            data=to_pdf(report_df, title=f"4라인 알람 TOP5 ({target_date})"),
-            file_name=f"alarm_top5_{target_date}.pdf",
-            mime="application/pdf",
-        )
+
+# ─────────────────────────────────────────
+# 푸터
+# ─────────────────────────────────────────
+st.markdown("---")
+st.caption("© POSCO FUTURE M · 정비팀 대시보드 · Streamlit powered")
