@@ -424,61 +424,140 @@ with k3:
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1.3, 1.7])
+# ===== 라인별 분포 카드 스타일 (전체 요약 KPI 카드와 동일 톤) =====
+st.markdown("""
+<style>
+/* 라인별 분포 카드 - 전체 요약 카드와 동일한 배경/형상 */
+.dist-card {
+    background-color: #1C1F26;
+    border-radius: 10px;
+    padding: 20px 25px;
+    margin-bottom: 10px;
+    min-height: 560px;
+}
+.dist-card-title {
+    color: #FAFAFA;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
 
+/* 카드 내부에서 st.columns로 만들어지는 미니 도넛 영역의 
+   기본 회색 배경/보더를 제거 (도넛이 개별 박스로 보이지 않게) */
+.dist-card div[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+col_left, col_right = st.columns(2)
+
+# ---------- 왼쪽: 라인별 알람 분포 ----------
 with col_left:
-    line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
-    line_counts["라인표시"] = line_counts["라인"].map(LINE_LABELS)
-    
-    fig = go.Figure(go.Pie(
-        labels=line_counts["라인표시"],
-        values=line_counts["건수"],
-        hole=0.6,
-        marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
-        textinfo="label+percent",
-        textfont=dict(color="white", size=11),
-    ))
-    fig.update_layout(
-        title="라인별 알람 분포",
-        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
-                          font=dict(size=20, color="white"), showarrow=False)]
+    # 카드 시작
+    st.markdown(
+        '<div class="dist-card">'
+        '<div class="dist-card-title">라인별 알람 분포</div>',
+        unsafe_allow_html=True
     )
-    apply_dark_theme(fig, height=380)
-    st.plotly_chart(fig, use_container_width=True)
 
+    line_dist = df_valid.groupby("라인").size().reset_index(name="건수")
+    line_dist["라인_라벨"] = line_dist["라인"].map(LINE_LABELS)
+    line_dist["색상"] = line_dist["라인"].map(LINE_COLORS)
+
+    fig_dist = go.Figure(go.Pie(
+        labels=line_dist["라인_라벨"],
+        values=line_dist["건수"],
+        hole=0.55,
+        marker=dict(colors=line_dist["색상"].tolist()),
+        textinfo="label+percent",
+        textposition="inside",
+        textfont=dict(size=12, color="white"),
+        sort=True,
+        direction="clockwise",
+    ))
+    fig_dist.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=480,
+        margin=dict(l=10, r=10, t=10, b=10),
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="middle", y=0.5,
+            xanchor="left", x=1.05,
+            font=dict(color="white", size=12),
+        ),
+        annotations=[dict(
+            text=f"<b>{line_dist['건수'].sum():,}</b><br>"
+                 f"<span style='font-size:12px;color:#8B92A0;'>전체</span>",
+            font=dict(size=22, color="white"),
+            showarrow=False,
+            x=0.5, y=0.5,
+        )],
+    )
+    st.plotly_chart(fig_dist, use_container_width=True, key="line_dist_donut")
+
+    # 카드 닫기
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ---------- 오른쪽: 라인별 비율 (미니 도넛 4개) ----------
 with col_right:
-    st.markdown("**라인별 비율 (알람 건수 기준)**")
+    # 카드 시작
+    st.markdown(
+        '<div class="dist-card">'
+        '<div class="dist-card-title">라인별 비율 (알람 건수 기준)</div>',
+        unsafe_allow_html=True
+    )
+
     line_summary = df_valid.groupby("라인").size().reset_index(name="건수")
+    line_order = ["4A", "4B", "4C", "4X"]
+    line_summary["_order"] = line_summary["라인"].map({v: i for i, v in enumerate(line_order)})
+    line_summary = line_summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
     total = line_summary["건수"].sum()
-    
+
     donut_cols = st.columns(len(line_summary))
     for dcol, (_, row) in zip(donut_cols, line_summary.iterrows()):
         with dcol:
             pct = round(row["건수"] / total * 100, 1)
             color = LINE_COLORS.get(row["라인"], "#8B92A0")
             line_label = LINE_LABELS.get(row["라인"], row["라인"])
-            
+
             fig = go.Figure(go.Pie(
                 values=[pct, 100 - pct],
-                hole=0.75,
+                hole=0.72,
                 marker=dict(colors=[color, "#2A2E37"]),
                 showlegend=False,
                 textinfo="none",
                 sort=False,
+                direction="clockwise",
+                rotation=0,
             ))
             fig.update_layout(
-                paper_bgcolor="#1C1F26",
-                height=180,
-                margin=dict(l=0, r=0, t=10, b=0),
-                annotations=[dict(text=f"<b>{pct}%</b>",
-                                  font=dict(size=18, color="white"), showarrow=False)],
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=200,
+                margin=dict(l=5, r=5, t=20, b=5),
+                annotations=[dict(
+                    text=f"<b>{pct}%</b>",
+                    font=dict(size=18, color="white"),
+                    showarrow=False
+                )],
             )
             st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
             st.markdown(
-                f"<center><span style='color:{color};font-weight:600;font-size:12px;'>{line_label}</span>"
-                f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
+                f"<div style='text-align:center; margin-top:5px;'>"
+                f"<span style='color:{color};font-weight:700;font-size:13px;'>{line_label}</span>"
+                f"<br><small style='color:#8B92A0;font-size:11px;'>{row['건수']:,} 건</small>"
+                f"</div>",
                 unsafe_allow_html=True
             )
+
+    # 카드 닫기
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
