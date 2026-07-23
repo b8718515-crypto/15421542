@@ -62,8 +62,8 @@ st.markdown("""
     
     .kpi-label {
         color: #8B92A0;
-        font-size: 11px;
-        letter-spacing: 1.5px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
         font-weight: 600;
     }
     .kpi-value {
@@ -73,16 +73,14 @@ st.markdown("""
         margin-top: 8px;
     }
     .kpi-sub {
-        color: #6B7280;
-        font-size: 11px;
-        margin-top: 4px;
+        display: none;
     }
     
     /* 섹션 헤더 */
     .section-header {
         color: #8B92A0;
-        font-size: 12px;
-        letter-spacing: 2px;
+        font-size: 13px;
+        letter-spacing: 1px;
         font-weight: 600;
         margin-top: 20px;
         margin-bottom: 10px;
@@ -124,7 +122,7 @@ st.markdown("""
 st.markdown("""
 <div class="dashboard-header">
     <div class="dashboard-title">🚨 알람 발생 이력 분석 대시보드</div>
-    <div class="dashboard-subtitle">라인별(4A/4B/4C/4X) TOP · 전체 TOP · 누적지속시간 · 종합점수 기반 분석</div>
+    <div class="dashboard-subtitle">라인별(대입경A/대입경B/단결정/열처리) TOP · 전체 TOP · 누적지속시간 · 종합점수 기반 분석</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -138,6 +136,15 @@ DATA_DIR.mkdir(exist_ok=True)
 
 LINES = ["4A", "4B", "4C", "4X"]
 
+# 🆕 라인 표시용 한글 라벨
+LINE_LABELS = {
+    "4A": "4라인 대입경A",
+    "4B": "4라인 대입경B",
+    "4C": "4라인 단결정",
+    "4X": "4라인 열처리",
+    "미분류": "미분류",
+}
+
 # 라인별 색상 (다크 테마 어울림)
 LINE_COLORS = {
     "4A": "#00E5FF",   # cyan
@@ -146,6 +153,10 @@ LINE_COLORS = {
     "4X": "#FF6B35",   # orange
     "미분류": "#8B92A0",
 }
+
+# 🆕 한글 라벨 기반 색상 매핑 (차트용)
+LINE_COLORS_LABEL = {LINE_LABELS[k]: v for k, v in LINE_COLORS.items()}
+
 
 # Plotly 다크 테마 공통 레이아웃
 def apply_dark_theme(fig, height=400):
@@ -449,7 +460,7 @@ with k5:
 
 
 # =========================================================
-# 🎯 중단: 라인별 파이 + 라인별 도넛 3개
+# 🎯 중단: 라인별 파이 + 라인별 도넛
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
@@ -458,24 +469,26 @@ col_left, col_right = st.columns([1.3, 1.7])
 with col_left:
     # 라인별 알람 건수 - 도넛 차트
     line_counts = df_valid.groupby("라인").size().reset_index(name="건수")
+    line_counts["라인표시"] = line_counts["라인"].map(LINE_LABELS)  # 🆕 한글 라벨
+    
     fig = go.Figure(go.Pie(
-        labels=line_counts["라인"],
+        labels=line_counts["라인표시"],
         values=line_counts["건수"],
         hole=0.6,
         marker=dict(colors=[LINE_COLORS.get(l, "#8B92A0") for l in line_counts["라인"]]),
         textinfo="label+percent",
-        textfont=dict(color="white", size=12),
+        textfont=dict(color="white", size=11),
     ))
     fig.update_layout(
         title="라인별 알람 분포",
-        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>Total</span>",
+        annotations=[dict(text=f"<b>{len(df_valid):,}</b><br><span style='font-size:11px;color:#8B92A0'>전체</span>",
                           font=dict(size=20, color="white"), showarrow=False)]
     )
     apply_dark_theme(fig, height=380)
     st.plotly_chart(fig, use_container_width=True)
 
 with col_right:
-    # 라인별 요약 - 미니 도넛 4개
+    # 라인별 요약 - 미니 도넛
     st.markdown("**라인별 비율 (알람 건수 기준)**")
     line_summary = df_valid.groupby("라인").size().reset_index(name="건수")
     total = line_summary["건수"].sum()
@@ -485,6 +498,8 @@ with col_right:
         with dcol:
             pct = round(row["건수"] / total * 100, 1)
             color = LINE_COLORS.get(row["라인"], "#8B92A0")
+            line_label = LINE_LABELS.get(row["라인"], row["라인"])  # 🆕 한글 라벨
+            
             fig = go.Figure(go.Pie(
                 values=[pct, 100 - pct],
                 hole=0.75,
@@ -502,7 +517,7 @@ with col_right:
             )
             st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
             st.markdown(
-                f"<center><span style='color:{color};font-weight:600;'>{row['라인']}</span>"
+                f"<center><span style='color:{color};font-weight:600;font-size:12px;'>{line_label}</span>"
                 f"<br><small style='color:#8B92A0'>{row['건수']:,} 건</small></center>",
                 unsafe_allow_html=True
             )
@@ -564,7 +579,6 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
                      x="발생빈도", y="알람명", orientation="h",
                      text="발생빈도",
                      color_discrete_sequence=[accent_color])
-
         fig.update_traces(textposition="outside")
         apply_dark_theme(fig, height=450)
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
@@ -601,19 +615,19 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 st.markdown('<div class="section-header">━━ 라인별 상세 분석</div>', unsafe_allow_html=True)
 
 tab_all, tab_4a, tab_4b, tab_4c, tab_4x, tab_cmp = st.tabs(
-    ["🌐 전체", "🅰️ 4A", "🅱️ 4B", "🅲 4C", "❎ 4X", "📊 라인 비교"]
+    ["🌐 전체", "🅰️ 4라인 대입경A", "🅱️ 4라인 대입경B", "🅲 4라인 단결정", "❎ 4라인 열처리", "📊 라인 비교"]
 )
 
 with tab_all:
     render_top("전체", df_valid, "all", "#00E5FF")
 with tab_4a:
-    render_top("4A 라인", df_valid[df_valid["라인"] == "4A"], "4a", LINE_COLORS["4A"])
+    render_top("4라인 대입경A", df_valid[df_valid["라인"] == "4A"], "4a", LINE_COLORS["4A"])
 with tab_4b:
-    render_top("4B 라인", df_valid[df_valid["라인"] == "4B"], "4b", LINE_COLORS["4B"])
+    render_top("4라인 대입경B", df_valid[df_valid["라인"] == "4B"], "4b", LINE_COLORS["4B"])
 with tab_4c:
-    render_top("4C 라인", df_valid[df_valid["라인"] == "4C"], "4c", LINE_COLORS["4C"])
+    render_top("4라인 단결정", df_valid[df_valid["라인"] == "4C"], "4c", LINE_COLORS["4C"])
 with tab_4x:
-    render_top("4X 라인", df_valid[df_valid["라인"] == "4X"], "4x", LINE_COLORS["4X"])
+    render_top("4라인 열처리", df_valid[df_valid["라인"] == "4X"], "4x", LINE_COLORS["4X"])
 
 with tab_cmp:
     st.markdown("#### 📊 라인별 요약")
@@ -627,26 +641,27 @@ with tab_cmp:
         line_summary["누적지속_초"] / line_summary["알람건수"]
     ).apply(seconds_to_hm)
     line_summary["누적지속시간_시간"] = (line_summary["누적지속_초"] / 3600).round(2)
+    line_summary["라인명"] = line_summary["라인"].map(LINE_LABELS)  # 🆕
 
     st.dataframe(
-        line_summary[["라인", "알람건수", "고유알람수", "누적지속시간", "평균지속시간"]],
+        line_summary[["라인명", "알람건수", "고유알람수", "누적지속시간", "평균지속시간"]],
         use_container_width=True,
     )
 
     c1, c2 = st.columns(2)
     with c1:
-        fig = px.bar(line_summary, x="라인", y="알람건수",
-                     text="알람건수", color="라인",
-                     color_discrete_map=LINE_COLORS)
+        fig = px.bar(line_summary, x="라인명", y="알람건수",
+                     text="알람건수", color="라인명",
+                     color_discrete_map=LINE_COLORS_LABEL)
         fig.update_traces(textposition="outside")
         apply_dark_theme(fig, height=380)
         fig.update_layout(title="라인별 알람 건수")
         st.plotly_chart(fig, use_container_width=True)
     with c2:
-        fig = px.bar(line_summary, x="라인", y="누적지속시간_시간",
-                     text="누적지속시간", color="라인",
+        fig = px.bar(line_summary, x="라인명", y="누적지속시간_시간",
+                     text="누적지속시간", color="라인명",
                      labels={"누적지속시간_시간": "누적지속시간 (h)"},
-                     color_discrete_map=LINE_COLORS)
+                     color_discrete_map=LINE_COLORS_LABEL)
         fig.update_traces(textposition="outside")
         apply_dark_theme(fig, height=380)
         fig.update_layout(title="라인별 누적지속시간")
@@ -662,17 +677,18 @@ with tab_cmp:
         .reset_index()
     )
     comp["누적지속시간_시간"] = (comp["누적지속_초"] / 3600).round(2)
+    comp["라인명"] = comp["라인"].map(LINE_LABELS)  # 🆕
 
-    fig1 = px.bar(comp, x="알람명", y="발생빈도", color="라인",
-                  barmode="stack", color_discrete_map=LINE_COLORS)
+    fig1 = px.bar(comp, x="알람명", y="발생빈도", color="라인명",
+                  barmode="stack", color_discrete_map=LINE_COLORS_LABEL)
     fig1.update_layout(xaxis_tickangle=-30, title=f"전체 TOP {top_n} 알람 - 라인별 발생빈도")
     apply_dark_theme(fig1, height=500)
     st.plotly_chart(fig1, use_container_width=True)
 
-    fig2 = px.bar(comp, x="알람명", y="누적지속시간_시간", color="라인",
+    fig2 = px.bar(comp, x="알람명", y="누적지속시간_시간", color="라인명",
                   barmode="stack",
                   labels={"누적지속시간_시간": "누적지속시간 (h)"},
-                  color_discrete_map=LINE_COLORS)
+                  color_discrete_map=LINE_COLORS_LABEL)
     fig2.update_layout(xaxis_tickangle=-30, title=f"전체 TOP {top_n} 알람 - 라인별 누적지속시간(h)")
     apply_dark_theme(fig2, height=500)
     st.plotly_chart(fig2, use_container_width=True)
