@@ -424,29 +424,34 @@ with k3:
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1.3, 1.7])
+col_left, col_right = st.columns(2)
 
+# ---------- 왼쪽: 라인별 알람 분포 ----------
 with col_left:
-    # 라인별 알람 분포 카드 배경을 '전체 요약' 카드와 동일한 톤으로 조정
-    st.markdown("""
-    <style>
-    /* '라인별 알람 분포' 카드에만 적용 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-dist-card-marker) {
-        background-color: #1E2129 !important;   /* ← 전체 요약 카드와 동일 톤 */
-        border: 1px solid #2A2E37 !important;
-        border-radius: 10px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
     with st.container(border=True):
-        # 카드 식별용 마커 (형상은 기존 유지)
+        # 카드 식별 마커 (숨김)
         st.markdown(
             "<div class='line-dist-card-marker' style='display:none;'></div>",
             unsafe_allow_html=True
         )
+        st.markdown("### 라인별 알람 분포")
 
-        # ===== 기존 '라인별 알람 분포' 코드 그대로 유지 =====
+        # ===== 기존 도넛 차트 코드 그대로 =====
+        # fig_dist = go.Figure(...)
+        # st.plotly_chart(fig_dist, use_container_width=True, key="line_dist_donut")
+
+# ---------- 오른쪽: 라인별 비율 (알람 건수 기준) ----------
+with col_right:
+    with st.container(border=True):
+        # 카드 식별 마커 (숨김)
+        st.markdown(
+            "<div class='line-ratio-card-marker' style='display:none;'></div>",
+            unsafe_allow_html=True
+        )
+        st.markdown("### 라인별 비율 (알람 건수 기준)")
+
+        # ===== 기존 4개 도넛 차트 코드 그대로 =====
+
         # (제목, 도넛 차트, 레전드 등 기존 코드 그대로)
         st.markdown("### 라인별 알람 분포")  # 기존 제목 방식 유지
 
@@ -489,18 +494,26 @@ with col_left:
 
 
 with col_right:
-    # 오른쪽 카드 배경을 왼쪽 카드와 동일한 밝은 회색 톤으로 지정
-    st.markdown("""
-    <style>
-    /* '라인별 비율' 카드에만 적용 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
-        background-color: #2A2E37 !important;   /* ← 왼쪽 카드와 동일 톤 */
-        border: 1px solid #3A3F4B !important;
-        border-radius: 10px !important;
-        padding: 15px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# ===== 라인별 분포 섹션 전체 배경을 '고유 알람' 카드와 동일하게 =====
+st.markdown("""
+<style>
+/* 라인별 분포 카드 (좌: 라인별 알람 분포 / 우: 라인별 비율) 배경 통일 */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-dist-card-marker),
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
+    background-color: #1C1F26 !important;   /* ← 고유 알람 카드와 동일 톤 */
+    border: 1px solid #2A2E37 !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+}
+
+/* 전체 요약 metric 카드와 정확히 같은 톤을 쓰고 싶다면 아래 선택자도 참고 */
+div[data-testid="stMetric"] {
+    background-color: #1C1F26 !important;
+    border-radius: 10px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
     with st.container(border=True):
         # 카드 식별용 마커 + 제목
