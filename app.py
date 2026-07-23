@@ -542,14 +542,15 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     top_df.index = top_df.index + 1
 
     sec_sum = data["지속시간_초"].sum()
-    a, b, c = st.columns(3)
     
+a, b, c = st.columns(3)   # ← 이 줄 추가!
 with a:
     render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
 with b:
     render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
 with c:
     render_kpi_card("누적 지속시간", seconds_to_hm(sec_sum), "", "yellow")
+
 
 
     st.markdown(f"#### 🏆 {title} - TOP {top_n}")
