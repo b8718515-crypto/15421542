@@ -106,10 +106,10 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    /* ✨ 탭 라운드 - 고급화 */
+    /* ✨ 탭 라운드 - 고급화 (개선) */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background-color: #1C1F26;
+        gap: 8px;
+        background-color: #16191F;
         padding: 8px;
         border-radius: 14px;
         border: 1px solid #2A2E37;
@@ -118,28 +118,39 @@ st.markdown("""
         background-color: transparent;
         color: #8B92A0;
         border-radius: 10px;
-        padding: 10px 20px;
-        transition: all 0.25s ease;
+        padding: 10px 22px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-weight: 500;
+        border: 1px solid transparent;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background-color: rgba(0, 229, 255, 0.08);
+        background-color: rgba(0, 229, 255, 0.06);
         color: #FAFAFA;
+        border-color: rgba(0, 229, 255, 0.2);
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%) !important;
+        background: linear-gradient(135deg, #00E5FF 0%, #0091EA 100%) !important;
         color: #0E1117 !important;
         font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(0, 229, 255, 0.35),
-                    0 0 0 1px rgba(0, 229, 255, 0.2);
-        transform: translateY(-1px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 
+            0 6px 20px rgba(0, 229, 255, 0.4),
+            0 0 0 1px rgba(0, 229, 255, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
     }
-    /* 탭 하이라이트 밑줄 제거 */
-    .stTabs [data-baseweb="tab-highlight"] {
-        background-color: transparent !important;
+    .stTabs [aria-selected="true"]:hover {
+        background: linear-gradient(135deg, #18F0FF 0%, #00A5F0 100%) !important;
+        box-shadow: 
+            0 8px 24px rgba(0, 229, 255, 0.5),
+            0 0 0 1px rgba(0, 229, 255, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
+    /* 탭 하이라이트 밑줄/보더 완전 제거 */
+    .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {
         background-color: transparent !important;
+        display: none !important;
     }
     
     /* 데이터프레임 라운드 */
@@ -185,6 +196,14 @@ st.markdown("""
         font-size: 12px;
         margin-top: 6px;
         padding-bottom: 8px;
+    }
+    
+    /* ✨ 미니 도넛 위 빈 컨테이너/여백 제거 */
+    div[data-testid="column"]:has(.mini-donut-card) > div:first-child {
+        gap: 0 !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(> div > .mini-donut-card) {
+        gap: 0 !important;
     }
     
     hr { border-color: #2A2E37; }
@@ -576,27 +595,31 @@ with col_right:
                 textinfo="none",
                 sort=False,
             ))
-            # ✨ 상하 여백 균등하게 (t=20, b=20)
+            # ✨ 상단 여백 최소화 (검은 네모 원인 제거)
             fig.update_layout(
                 paper_bgcolor="#1C1F26",
                 plot_bgcolor="#1C1F26",
-                height=200,
-                margin=dict(l=10, r=10, t=20, b=20),
+                height=180,
+                margin=dict(l=10, r=10, t=10, b=10),
                 annotations=[dict(text=f"<b>{pct}%</b>",
                                   font=dict(size=18, color="white"), showarrow=False)],
             )
             
-            # ✨ 미니 도넛 카드 컨테이너 시작 (하단 여백 확대)
+            # ✨ 카드 하나로 감싸기 (툴바 숨김으로 빈 컨테이너 제거)
             st.markdown('<div class="mini-donut-card">', unsafe_allow_html=True)
-            st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
+            st.plotly_chart(
+                fig, use_container_width=True,
+                key=f"mini_donut_{row['라인']}",
+                config={'displayModeBar': False},   # 📷 카메라/확대 아이콘 숨김
+            )
             st.markdown(
                 f"""
                 <div class="mini-donut-label" style="color:{color};">{line_label}</div>
                 <div class="mini-donut-sub">{row['건수']:,} 건</div>
+                </div>
                 """,
                 unsafe_allow_html=True
             )
-            st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
@@ -627,7 +650,7 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     with b:
         render_kpi_card_sm("고유 알람", f"{data['알람명'].nunique():,} 종", "green")
 
-    st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
+    # 표는 유지 (제목은 차트 안으로 이동)
     st.dataframe(
         top_df[["알람명", "발생빈도", "비율(%)"]],
         use_container_width=True,
@@ -639,19 +662,19 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
                  text="발생빈도",
                  color_discrete_sequence=[accent_color])
     fig.update_traces(textposition="outside")
-    apply_dark_theme(fig, height=480)
+    apply_dark_theme(fig, height=500)
     
-    # ✨ 제목을 오른쪽 아래로 이동 (구석 X, 여백 있음)
+    # ✨ 제목을 상단 중앙 + 글자 크게
     fig.update_layout(
         title=dict(
-            text=f"{title} - 발생빈도 TOP {top_n}",
-            x=0.92,           # 오른쪽에서 약간 안쪽
-            xanchor="right",
-            y=0.05,           # 아래쪽에서 약간 위
-            yanchor="bottom",
-            font=dict(size=13, color="#8B92A0"),
+            text=f"<b>🏆 {title} - 발생빈도 TOP {top_n}</b>",
+            x=0.5,
+            xanchor="center",
+            y=0.97,
+            yanchor="top",
+            font=dict(size=18, color="#FAFAFA"),
         ),
-        margin=dict(l=40, r=60, t=40, b=70),  # 하단·우측 여백 확대
+        margin=dict(l=40, r=40, t=80, b=40),
     )
     st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
 
