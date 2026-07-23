@@ -479,7 +479,7 @@ with col_left:
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             height=400,
-            margin=dict(l=10, r=10, t=2, b=10),
+            margin=dict(l=10, r=10, t=10, b=10),
             showlegend=True,
             legend=dict(
                 orientation="v",
@@ -535,7 +535,7 @@ with col_right:
                 fig.update_layout(
     paper_bgcolor="#0E1117",   # ← 카드 배경과 동일한 회색 ⭐
     plot_bgcolor="#0E1117",    # ← 카드 배경과 동일한 회색 ⭐
-                    height=200,
+                    height=400,
                     margin=dict(l=5, r=5, t=20, b=5),
                     annotations=[dict(
                         text=f"<b>{pct}%</b>",
