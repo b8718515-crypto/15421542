@@ -429,7 +429,7 @@ st.markdown("""
 <style>
 /* 마커가 포함된 컨테이너 = 라인별 분포 카드 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) {
-    background-color: #0E1117 !important;   /* ← 전체 요약과 동일 (Streamlit 기본 배경) */
+    background-color: #1C1F26 !important;   /* ← 전체 요약과 동일 (Streamlit 기본 배경) */
     border: 1px solid #262730 !important;   /* ← 얇은 다크 보더 */
     border-radius: 10px !important;
     padding: 20px 25px !important;
