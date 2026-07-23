@@ -14,7 +14,13 @@ st.set_page_config(
 )
 
 st.title("🚨 알람 발생 이력 분석 대시보드")
-st.caption("여러 파일 업로드 지원 · 발생빈도 · 누적지속시간(시간+분) · 종합점수 기반 TOP 알람 분석")
+st.caption("라인별(4A/4B/4C/4X) TOP · 전체 TOP · 누적지속시간(시간+분) · 종합점수 기반 분석")
+
+
+# =========================================================
+# 라인 정의
+# =========================================================
+LINES = ["4A", "4B", "4C", "4X"]
 
 
 # =========================================================
@@ -31,7 +37,6 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
             pass
 
     s = series.astype(str).str.strip()
-
     s = (
         s.str.replace("년", "-", regex=False)
          .str.replace("월", "-", regex=False)
@@ -65,12 +70,9 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
         return out
 
     fmts = [
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y/%m/%d %H:%M:%S",
-        "%Y/%m/%d %H:%M",
-        "%Y%m%d %H%M%S",
-        "%Y%m%d%H%M%S",
+        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
+        "%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M",
+        "%Y%m%d %H%M%S", "%Y%m%d%H%M%S",
     ]
     for f in fmts:
         out = pd.to_datetime(s, format=f, errors="coerce")
@@ -93,8 +95,20 @@ def seconds_to_hm(total_seconds: float) -> str:
 
 
 # =========================================================
-# 유틸: 파일 읽기
+# 유틸: 라인 자동 감지
 # =========================================================
+def detect_line(text: str) -> str:
+    """텍스트에서 4A/4B/4C/4X 라인 코드 감지 (대소문자 무시)."""
+    if not isinstance(text, str):
+        return "미분류"
+    t = text.upper()
+    for ln in LINES:
+        # 4A, 4-A, 4_A, 4 A 형태 모두 지원
+        if re.search(rf"4[\s_\-]*{ln[1]}", t):
+            return ln
+    return "미분류"
+
+
 def read_file(file) -> pd.DataFrame:
     name = file.name.lower()
     if name.endswith(".csv"):
@@ -111,7 +125,7 @@ with st.sidebar:
     uploaded_files = st.file_uploader(
         "알람 이력 파일 업로드 (여러 개 가능)",
         type=["xlsx", "xls", "csv"],
-        accept_multiple_files=True,  # ✅ 다중 업로드
+        accept_multiple_files=True,
     )
 
     st.markdown("---")
@@ -125,10 +139,10 @@ with st.sidebar:
 
 
 # =========================================================
-# 파일 읽기 & 병합
+# 파일 로드
 # =========================================================
 if not uploaded_files:
-    st.info("👈 좌측에서 알람 이력 파일을 **하나 이상** 업로드하세요.")
+    st.info("👈 좌측에서 알람 이력 파일을 업로드하세요.")
     st.stop()
 
 raw_frames = []
@@ -142,22 +156,20 @@ for f in uploaded_files:
     except Exception as e:
         file_info.append((f.name, 0, str(e)))
 
-# 파일별 로드 결과 표시
 st.subheader("📁 업로드된 파일")
-info_df = pd.DataFrame(file_info, columns=["파일명", "행 수", "오류"])
-st.dataframe(info_df, use_container_width=True)
+st.dataframe(pd.DataFrame(file_info, columns=["파일명", "행 수", "오류"]),
+             use_container_width=True)
 
 if not raw_frames:
     st.error("읽을 수 있는 파일이 없습니다.")
     st.stop()
 
-# 컬럼이 다를 수 있으므로 outer 병합
 df_raw = pd.concat(raw_frames, ignore_index=True, sort=False)
 st.success(f"✅ 총 {len(uploaded_files)}개 파일 병합 완료 · 총 **{len(df_raw):,} 행**")
 
 
 # =========================================================
-# 컬럼 매핑 (병합된 df 기준)
+# 컬럼 매핑
 # =========================================================
 st.subheader("🔧 컬럼 매핑")
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
@@ -169,9 +181,9 @@ def guess(name_candidates):
                 return c
     return cols[0]
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
-    g = guess(["알람", "알람명", "Alarm", "MSG"])
+    g = guess(["알람", "Alarm", "MSG"])
     col_alarm = st.selectbox("알람명 컬럼", cols,
                              index=cols.index(g) if g in cols else 0)
 with c2:
@@ -182,6 +194,10 @@ with c3:
     g = guess(["해제", "종료", "End", "Off", "복구"])
     col_end = st.selectbox("해제시간 컬럼", cols,
                            index=cols.index(g) if g in cols else 0)
+with c4:
+    line_source_options = ["(자동 감지 - 파일명)", "(자동 감지 - 알람명)"] + cols
+    line_src = st.selectbox("라인 컬럼", line_source_options, index=0,
+                            help="라인 정보가 별도 컬럼에 있으면 선택, 없으면 자동 감지")
 
 
 # =========================================================
@@ -190,31 +206,40 @@ with c3:
 df = df_raw[[col_alarm, col_start, col_end, "_파일명"]].copy()
 df.columns = ["알람명", "발생시간", "해제시간", "파일명"]
 
+# 라인 감지
+if line_src == "(자동 감지 - 파일명)":
+    df["라인"] = df["파일명"].apply(detect_line)
+elif line_src == "(자동 감지 - 알람명)":
+    df["라인"] = df["알람명"].apply(detect_line)
+else:
+    df["라인"] = df_raw[line_src].apply(detect_line)
+
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 df["해제시간"] = robust_to_datetime(df["해제시간"])
 df["지속시간_초"] = (df["해제시간"] - df["발생시간"]).dt.total_seconds()
 
 
 # =========================================================
-# 파일 필터
+# 라인 감지 결과 요약
 # =========================================================
 st.markdown("---")
-st.subheader("🔎 파일 필터")
-all_files = sorted(df["파일명"].unique().tolist())
-selected_files = st.multiselect(
-    "분석에 포함할 파일 선택",
-    options=all_files,
-    default=all_files,
-)
-df = df[df["파일명"].isin(selected_files)]
+st.subheader("🏭 라인 감지 결과")
+line_counts = df["라인"].value_counts().reindex(LINES + ["미분류"], fill_value=0)
+cc = st.columns(len(line_counts))
+for i, (ln, cnt) in enumerate(line_counts.items()):
+    cc[i].metric(ln, f"{cnt:,} 건")
+
+if line_counts.get("미분류", 0) > 0:
+    with st.expander("⚠️ 미분류 데이터 샘플 보기"):
+        st.dataframe(
+            df[df["라인"] == "미분류"][["파일명", "알람명"]].head(20),
+            use_container_width=True,
+        )
 
 
 # =========================================================
 # 파싱 디버그
 # =========================================================
-with st.expander("🔍 원본 데이터 미리보기 (상위 20행)"):
-    st.dataframe(df_raw.head(20), use_container_width=True)
-
 with st.expander("🐞 시간 파싱 디버그"):
     d1, d2, d3, d4 = st.columns(4)
     d1.metric("발생시간 파싱 성공", f"{df['발생시간'].notna().sum()}/{len(df)}")
@@ -225,21 +250,21 @@ with st.expander("🐞 시간 파싱 디버그"):
 
 
 # =========================================================
-# 유효 데이터만
+# 유효 데이터
 # =========================================================
 df_valid = df.dropna(subset=["발생시간", "해제시간"]).copy()
 df_valid = df_valid[df_valid["지속시간_초"] > 0]
 
 if len(df_valid) == 0:
-    st.error("유효한 지속시간 데이터가 없습니다. 컬럼 매핑을 확인하세요.")
+    st.error("유효한 지속시간 데이터가 없습니다.")
     st.stop()
 
 
 # =========================================================
-# 상단 KPI
+# 전체 KPI
 # =========================================================
 st.markdown("---")
-st.subheader("📊 전체 요약 지표")
+st.subheader("📊 전체 요약")
 
 total_sec = df_valid["지속시간_초"].sum()
 k1, k2, k3, k4 = st.columns(4)
@@ -250,149 +275,171 @@ k4.metric("평균 지속시간", seconds_to_hm(df_valid["지속시간_초"].mean
 
 
 # =========================================================
-# 파일별 요약
+# 공통 집계 함수
+# =========================================================
+def build_agg(data: pd.DataFrame) -> pd.DataFrame:
+    if len(data) == 0:
+        return pd.DataFrame(columns=["알람명", "발생빈도", "누적지속시간(시간+분)",
+                                     "누적지속시간_시간", "종합점수"])
+    agg = data.groupby("알람명").agg(
+        발생빈도=("알람명", "count"),
+        누적지속_초=("지속시간_초", "sum"),
+    ).reset_index()
+    agg["누적지속시간_시간"] = (agg["누적지속_초"] / 3600).round(2)
+    agg["누적지속시간(시간+분)"] = agg["누적지속_초"].apply(seconds_to_hm)
+
+    def minmax(s):
+        if s.max() == s.min():
+            return pd.Series([0] * len(s), index=s.index)
+        return (s - s.min()) / (s.max() - s.min())
+
+    agg["_f"] = minmax(agg["발생빈도"])
+    agg["_d"] = minmax(agg["누적지속시간_시간"])
+    agg["종합점수"] = (agg["_f"] * w1 + agg["_d"] * w2).round(4)
+
+    return agg.sort_values("종합점수", ascending=False).reset_index(drop=True)
+
+
+def render_top(title: str, data: pd.DataFrame, key_prefix: str):
+    """TOP 표 + 3종 차트 렌더링"""
+    if len(data) == 0:
+        st.warning(f"⚠️ **{title}** : 유효 데이터 없음")
+        return
+
+    agg = build_agg(data)
+    top_df = agg.head(top_n).copy()
+    top_df.index = top_df.index + 1
+
+    # 요약 지표
+    sec_sum = data["지속시간_초"].sum()
+    a, b, c = st.columns(3)
+    a.metric("알람 건수", f"{len(data):,} 건")
+    b.metric("고유 알람", f"{data['알람명'].nunique():,} 종")
+    c.metric("누적지속시간", seconds_to_hm(sec_sum))
+
+    st.markdown(f"#### 🏆 {title} - TOP {top_n}")
+    st.dataframe(
+        top_df[["알람명", "발생빈도", "누적지속시간(시간+분)",
+                "누적지속시간_시간", "종합점수"]],
+        use_container_width=True,
+    )
+
+    t1, t2, t3 = st.tabs(["발생빈도", "누적지속시간", "종합점수"])
+    with t1:
+        fig = px.bar(top_df.sort_values("발생빈도"),
+                     x="발생빈도", y="알람명", orientation="h",
+                     text="발생빈도", title=f"{title} - 발생빈도 TOP {top_n}")
+        fig.update_layout(height=450)
+        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_freq")
+    with t2:
+        fig = px.bar(top_df.sort_values("누적지속시간_시간"),
+                     x="누적지속시간_시간", y="알람명", orientation="h",
+                     text="누적지속시간(시간+분)",
+                     title=f"{title} - 누적지속시간 TOP {top_n}",
+                     labels={"누적지속시간_시간": "누적지속시간 (h)"})
+        fig.update_layout(height=450)
+        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_dur")
+    with t3:
+        fig = px.bar(top_df.sort_values("종합점수"),
+                     x="종합점수", y="알람명", orientation="h",
+                     text="종합점수",
+                     title=f"{title} - 종합점수 TOP {top_n}")
+        fig.update_layout(height=450)
+        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_score")
+
+    # 다운로드
+    csv = agg[["알람명", "발생빈도", "누적지속시간(시간+분)",
+               "누적지속시간_시간", "종합점수"]].to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        f"📥 {title} 집계 CSV 다운로드",
+        data=csv,
+        file_name=f"알람_TOP_{title}.csv",
+        mime="text/csv",
+        key=f"{key_prefix}_dl",
+    )
+
+
+# =========================================================
+# 라인별 TOP + 전체 TOP (탭 구성)
 # =========================================================
 st.markdown("---")
-st.subheader("📁 파일별 요약")
+st.subheader("🏭 라인별 · 전체 TOP 분석")
 
-file_summary = df_valid.groupby("파일명").agg(
-    알람건수=("알람명", "count"),
-    고유알람수=("알람명", "nunique"),
-    누적지속_초=("지속시간_초", "sum"),
-).reset_index()
-file_summary["누적지속시간"] = file_summary["누적지속_초"].apply(seconds_to_hm)
-file_summary["평균지속시간"] = (file_summary["누적지속_초"] / file_summary["알람건수"]).apply(seconds_to_hm)
-file_summary = file_summary[["파일명", "알람건수", "고유알람수", "누적지속시간", "평균지속시간"]]
+tab_all, tab_4a, tab_4b, tab_4c, tab_4x, tab_cmp = st.tabs(
+    ["🌐 전체", "🅰️ 4A", "🅱️ 4B", "🅲 4C", "❎ 4X", "📊 라인 비교"]
+)
 
-st.dataframe(file_summary, use_container_width=True)
+with tab_all:
+    render_top("전체", df_valid, "all")
 
+with tab_4a:
+    render_top("4A 라인", df_valid[df_valid["라인"] == "4A"], "4a")
 
-# =========================================================
-# 알람별 집계
-# =========================================================
-agg = df_valid.groupby("알람명").agg(
-    발생빈도=("알람명", "count"),
-    누적지속_초=("지속시간_초", "sum"),
-).reset_index()
+with tab_4b:
+    render_top("4B 라인", df_valid[df_valid["라인"] == "4B"], "4b")
 
-agg["누적지속시간_시간"] = (agg["누적지속_초"] / 3600).round(2)
-agg["누적지속시간(시간+분)"] = agg["누적지속_초"].apply(seconds_to_hm)
+with tab_4c:
+    render_top("4C 라인", df_valid[df_valid["라인"] == "4C"], "4c")
 
-def minmax(s):
-    if s.max() == s.min():
-        return pd.Series([0] * len(s), index=s.index)
-    return (s - s.min()) / (s.max() - s.min())
-
-agg["_freq_norm"] = minmax(agg["발생빈도"])
-agg["_dur_norm"] = minmax(agg["누적지속시간_시간"])
-agg["종합점수"] = (agg["_freq_norm"] * w1 + agg["_dur_norm"] * w2).round(4)
-
-agg_sorted = agg.sort_values("종합점수", ascending=False).reset_index(drop=True)
+with tab_4x:
+    render_top("4X 라인", df_valid[df_valid["라인"] == "4X"], "4x")
 
 
 # =========================================================
-# TOP N
+# 라인 비교 탭
 # =========================================================
-st.markdown("---")
-st.subheader(f"🏆 TOP {top_n} 알람 (종합점수 순)")
+with tab_cmp:
+    st.markdown("#### 📊 라인별 요약")
+    line_summary = df_valid.groupby("라인").agg(
+        알람건수=("알람명", "count"),
+        고유알람수=("알람명", "nunique"),
+        누적지속_초=("지속시간_초", "sum"),
+    ).reset_index()
+    line_summary["누적지속시간"] = line_summary["누적지속_초"].apply(seconds_to_hm)
+    line_summary["평균지속시간"] = (
+        line_summary["누적지속_초"] / line_summary["알람건수"]
+    ).apply(seconds_to_hm)
+    line_summary["누적지속시간_시간"] = (line_summary["누적지속_초"] / 3600).round(2)
+    show_line_sum = line_summary[
+        ["라인", "알람건수", "고유알람수", "누적지속시간", "평균지속시간"]
+    ]
+    st.dataframe(show_line_sum, use_container_width=True)
 
-show_cols = ["알람명", "발생빈도", "누적지속시간(시간+분)", "누적지속시간_시간", "종합점수"]
-top_df = agg_sorted.head(top_n)[show_cols].copy()
-top_df.index = top_df.index + 1
-st.dataframe(top_df, use_container_width=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        fig = px.bar(line_summary, x="라인", y="알람건수",
+                     text="알람건수", title="라인별 알람 건수",
+                     color="라인")
+        st.plotly_chart(fig, use_container_width=True)
+    with c2:
+        fig = px.bar(line_summary, x="라인", y="누적지속시간_시간",
+                     text="누적지속시간",
+                     title="라인별 누적지속시간",
+                     labels={"누적지속시간_시간": "누적지속시간 (h)"},
+                     color="라인")
+        st.plotly_chart(fig, use_container_width=True)
 
-
-# =========================================================
-# 차트
-# =========================================================
-st.markdown("---")
-st.subheader("📈 시각화")
-
-tab1, tab2, tab3, tab4 = st.tabs(["발생빈도", "누적지속시간(h)", "종합점수", "파일별 비교"])
-
-with tab1:
-    fig = px.bar(
-        top_df.sort_values("발생빈도"),
-        x="발생빈도", y="알람명", orientation="h",
-        text="발생빈도", title=f"TOP {top_n} 발생빈도",
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-with tab2:
-    plot_df = top_df.sort_values("누적지속시간_시간")
-    fig = px.bar(
-        plot_df,
-        x="누적지속시간_시간", y="알람명", orientation="h",
-        text="누적지속시간(시간+분)",
-        title=f"TOP {top_n} 누적지속시간",
-        labels={"누적지속시간_시간": "누적지속시간 (h)"},
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-with tab3:
-    fig = px.bar(
-        top_df.sort_values("종합점수"),
-        x="종합점수", y="알람명", orientation="h",
-        text="종합점수", title=f"TOP {top_n} 종합점수",
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-with tab4:
-    # 파일별 × 알람 TOP 비교 (스택 막대)
-    top_alarms = top_df["알람명"].tolist()
+    # 전체 TOP 알람이 라인별로 얼마나 발생하는지
+    st.markdown("#### 🔍 전체 TOP 알람의 라인별 분포")
+    overall_top = build_agg(df_valid).head(top_n)["알람명"].tolist()
     comp = (
-        df_valid[df_valid["알람명"].isin(top_alarms)]
-        .groupby(["파일명", "알람명"])
+        df_valid[df_valid["알람명"].isin(overall_top)]
+        .groupby(["알람명", "라인"])
         .agg(발생빈도=("알람명", "count"),
              누적지속_초=("지속시간_초", "sum"))
         .reset_index()
     )
     comp["누적지속시간_시간"] = (comp["누적지속_초"] / 3600).round(2)
 
-    fig = px.bar(
-        comp, x="알람명", y="발생빈도", color="파일명",
-        title=f"파일별 TOP {top_n} 알람 발생빈도 비교",
-        barmode="group",
-    )
-    fig.update_layout(height=500, xaxis_tickangle=-30)
-    st.plotly_chart(fig, use_container_width=True)
+    fig1 = px.bar(comp, x="알람명", y="발생빈도", color="라인",
+                  title=f"전체 TOP {top_n} 알람 - 라인별 발생빈도",
+                  barmode="stack")
+    fig1.update_layout(xaxis_tickangle=-30, height=500)
+    st.plotly_chart(fig1, use_container_width=True)
 
-    fig2 = px.bar(
-        comp, x="알람명", y="누적지속시간_시간", color="파일명",
-        title=f"파일별 TOP {top_n} 알람 누적지속시간(h) 비교",
-        barmode="group",
-        labels={"누적지속시간_시간": "누적지속시간 (h)"},
-    )
-    fig2.update_layout(height=500, xaxis_tickangle=-30)
+    fig2 = px.bar(comp, x="알람명", y="누적지속시간_시간", color="라인",
+                  title=f"전체 TOP {top_n} 알람 - 라인별 누적지속시간(h)",
+                  barmode="stack",
+                  labels={"누적지속시간_시간": "누적지속시간 (h)"})
+    fig2.update_layout(xaxis_tickangle=-30, height=500)
     st.plotly_chart(fig2, use_container_width=True)
-
-
-# =========================================================
-# 다운로드
-# =========================================================
-st.markdown("---")
-st.subheader("💾 결과 다운로드")
-
-download_df = agg_sorted[["알람명", "발생빈도", "누적지속시간(시간+분)",
-                          "누적지속시간_시간", "종합점수"]]
-
-col_a, col_b = st.columns(2)
-with col_a:
-    csv1 = download_df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "📥 알람별 집계 CSV",
-        data=csv1,
-        file_name="알람_분석_결과.csv",
-        mime="text/csv",
-    )
-with col_b:
-    csv2 = file_summary.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "📥 파일별 요약 CSV",
-        data=csv2,
-        file_name="파일별_요약.csv",
-        mime="text/csv",
-    )
