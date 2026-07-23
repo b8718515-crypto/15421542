@@ -176,27 +176,39 @@ st.markdown("""
         border-radius: 14px;
     }
     
-    /* ✨ 라인별 비율 미니 도넛 카드 */
-    .mini-donut-card {
+    /* ✨ 라인별 비율 미니 도넛 - 컬럼 자체를 카드로 */
+    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
+    > div[data-testid="column"] {
         background-color: #1C1F26;
         border-radius: 16px;
-        padding: 14px 12px 24px 12px;
         border: 1px solid #2A2E37;
-        margin-bottom: 8px;
+        padding: 8px 8px 16px 8px;
+        margin: 0 4px;
     }
+    /* 컬럼 내부의 빈 간격 제거 */
+    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
+    > div[data-testid="column"] > div[data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    /* plotly 차트 배경 투명하게 (카드 배경 그대로 보이게) */
+    div[data-testid="stHorizontalBlock"]:has(.mini-donut-label) 
+    .js-plotly-plot .plot-container {
+        background: transparent !important;
+    }
+    
     .mini-donut-label {
         text-align: center;
         font-weight: 700;
         font-size: 13px;
-        margin-top: 10px;
+        margin-top: 4px;
     }
     .mini-donut-sub {
         text-align: center;
         color: #8B92A0;
         font-size: 12px;
-        margin-top: 6px;
-        padding-bottom: 8px;
+        margin-top: 4px;
     }
+
     
     /* ✨ 미니 도넛 위 빈 컨테이너/여백 제거 */
     div[data-testid="column"]:has(.mini-donut-card) > div:first-child {
@@ -595,31 +607,29 @@ with col_right:
                 textinfo="none",
                 sort=False,
             ))
-            # ✨ 상단 여백 최소화 (검은 네모 원인 제거)
             fig.update_layout(
-                paper_bgcolor="#1C1F26",
-                plot_bgcolor="#1C1F26",
-                height=180,
-                margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor="rgba(0,0,0,0)",   # ⬅️ 완전 투명
+                plot_bgcolor="rgba(0,0,0,0)",    # ⬅️ 완전 투명
+                height=170,
+                margin=dict(l=5, r=5, t=5, b=5),
                 annotations=[dict(text=f"<b>{pct}%</b>",
                                   font=dict(size=18, color="white"), showarrow=False)],
             )
             
-            # ✨ 카드 하나로 감싸기 (툴바 숨김으로 빈 컨테이너 제거)
-            st.markdown('<div class="mini-donut-card">', unsafe_allow_html=True)
+            # ✨ 빈 컨테이너 없이 차트 + 라벨만 직접 렌더링
             st.plotly_chart(
                 fig, use_container_width=True,
                 key=f"mini_donut_{row['라인']}",
-                config={'displayModeBar': False},   # 📷 카메라/확대 아이콘 숨김
+                config={'displayModeBar': False},
             )
             st.markdown(
                 f"""
                 <div class="mini-donut-label" style="color:{color};">{line_label}</div>
                 <div class="mini-donut-sub">{row['건수']:,} 건</div>
-                </div>
                 """,
                 unsafe_allow_html=True
             )
+
 
 
 # =========================================================
