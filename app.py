@@ -447,12 +447,13 @@ with col_left:
     st.plotly_chart(fig, use_container_width=True)
 
 with col_right:
-    # 컨테이너 배경색을 왼쪽 카드와 동일하게 커스터마이징
+    # 오른쪽 카드 배경을 왼쪽과 동일한 톤으로 지정하는 CSS
     st.markdown("""
     <style>
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div[data-testid="stVerticalBlock"] > div > div > .line-ratio-title) {
+    /* '라인별 비율' 카드에만 적용되도록 고유 클래스 사용 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.line-ratio-card-marker) {
         background-color: #1C1F26 !important;
-        border: 1px solid #1C1F26 !important;
+        border: 1px solid #2A2E37 !important;
         border-radius: 10px !important;
         padding: 15px !important;
     }
@@ -460,10 +461,11 @@ with col_right:
     """, unsafe_allow_html=True)
 
     with st.container(border=True):
-        # 제목 (식별용 클래스 포함)
+        # 카드 식별용 마커 + 제목
         st.markdown(
-            "<div class='line-ratio-title' style='color:#FAFAFA; font-size:15px; "
-            "font-weight:700; margin-bottom:10px;'>라인별 비율 (알람 건수 기준)</div>",
+            "<div class='line-ratio-card-marker' "
+            "style='color:#FAFAFA; font-size:15px; font-weight:700; margin-bottom:10px;'>"
+            "라인별 비율 (알람 건수 기준)</div>",
             unsafe_allow_html=True
         )
 
@@ -492,8 +494,8 @@ with col_right:
                     rotation=0,
                 ))
                 fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",   # ← 회색 네모 제거 (투명)
-                    plot_bgcolor="rgba(0,0,0,0)",    # ← 회색 네모 제거 (투명)
+                    paper_bgcolor="rgba(0,0,0,0)",   # 도넛 뒤 네모 없음 유지
+                    plot_bgcolor="rgba(0,0,0,0)",
                     height=180,
                     margin=dict(l=5, r=5, t=10, b=5),
                     annotations=[dict(
@@ -510,6 +512,7 @@ with col_right:
                     f"</center>",
                     unsafe_allow_html=True
                 )
+
 
 
 
