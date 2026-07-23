@@ -44,7 +44,7 @@ st.markdown("""
     }
     
     .kpi-card {
-        background-color: #FAFAFA;
+        background-color: #1C1F26;
         padding: 20px;
         border-radius: 10px;
         border-left: 3px solid #00E5FF;
