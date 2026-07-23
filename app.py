@@ -191,17 +191,11 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    # 📍 디버그: 실제 저장 경로 표시
-    with st.expander("🔧 저장 경로 확인 (디버그)"):
-        st.code(f"저장 폴더: {DATA_DIR}")
-        st.code(f"폴더 존재: {DATA_DIR.exists()}")
-        try:
-            actual_files = list(DATA_DIR.iterdir())
-            st.write(f"폴더 내 파일 수: {len(actual_files)}")
-            for p in actual_files:
-                st.write(f"- {p.name} ({p.stat().st_size:,} bytes)")
-        except Exception as e:
-            st.error(f"폴더 읽기 오류: {e}")
+# ❌ 삭제 (또는 주석 처리)
+with st.expander("🐛 시간 파싱 디버그"):
+    st.write(...)
+    st.dataframe(...)
+    # ... 등등
 
 
     # 현재 서버에 저장된 파일 목록
