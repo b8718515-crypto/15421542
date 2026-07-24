@@ -86,20 +86,21 @@ st.markdown("""
     border: 1px solid #2A2E37;
 }
 
+/* 각 탭에 좌우 margin 강제 적용 */
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #8B92A0;
-    border-radius: 6px;
+    border-radius: 6px 6px 0 0;
     padding: 12px 24px;
+    margin: 0 8px !important;      /* ← 이거! 좌우 8px 간격 강제 ⭐ */
     font-size: 15px;
-    font-weight: 700;              /* ← 비선택도 700으로 통일 (색만 흐리게) */
-    border-bottom: 2px solid transparent !important;  /* ← 투명 border로 공간 확보 ⭐ */
+    font-weight: 700;
+    border-bottom: 2px solid transparent !important;
+    justify-content: center;
     text-align: center;
-    justify-content: center;       /* ← 항상 중앙 정렬 */
-    display: flex;
-    align-items: center;
-    transition: color 0.2s ease, background-color 0.2s ease;  /* 크기 변화는 트랜지션 X */
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
+
 
 .stTabs [data-baseweb="tab"]:hover {
     background-color: #2A2E37;
