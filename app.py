@@ -657,10 +657,19 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     
     st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
-    st.dataframe(
-        top_df[["알람명", "발생빈도", "비율(%)"]],
-        use_container_width=True,
-    )
+    
+    # ⭐ 컬럼으로 감싸서 폭 제한 (60%만 사용)
+    tbl_col, _ = st.columns([6, 4])
+    with tbl_col:
+        st.dataframe(
+            top_df[["알람명", "발생빈도", "비율(%)"]],
+            use_container_width=True,
+            column_config={
+                "발생빈도": st.column_config.NumberColumn("발생빈도", width="small"),
+                "비율(%)": st.column_config.NumberColumn("비율(%)", width="small"),
+            },
+        )
+
 
     # 발생빈도 막대 차트
     fig = px.bar(top_df.sort_values("발생빈도"),
