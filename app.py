@@ -112,7 +112,6 @@ st.markdown("""
     font-weight: 700 !important;
     border-bottom: 2px solid #00E5FF !important;
     /* padding, height 재선언 X ⭐ */
-    min-width: 140px !important;            /* ← 최소너비 ⭐ */
 }
 
 
