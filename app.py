@@ -485,7 +485,7 @@ with col_left:
                 orientation="v",
                 yanchor="middle", y=0.5,
                 xanchor="left", x=1.05,
-                font=dict(color="white", size=12),
+                font=dict(color="white", size=18),
             ),
             annotations=[dict(
                 text=f"<b>{line_dist['건수'].sum():,}</b><br>"
