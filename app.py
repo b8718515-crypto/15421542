@@ -478,7 +478,7 @@ with col_left:
         fig_dist.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            height=400,
+            height=370,
             margin=dict(l=10, r=10, t=10, b=10),
             showlegend=True,
             legend=dict(
