@@ -94,6 +94,7 @@ st.markdown("""
         background-color: #2A2E37 !important;
         color: #00E5FF !important;  
         font-weight: 700;
+        padding: 12px 24px;    /* ← 동일하게 맞춰야 흔들림 없음 */
     }
     
     .stDataFrame {
