@@ -78,48 +78,88 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
+/* ============ 탭 리스트 ============ */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 16px;                              /* 탭 간격 */
+    gap: 16px;
     background-color: #1C1F26;
     padding: 12px;
     border-radius: 10px;
     border: 1px solid #2A2E37;
+    align-items: center !important;         /* ← 리스트도 중앙 */
 }
 
+/* ============ 탭 버튼 (바깥) ============ */
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #8B92A0;
-    border-radius: 6px 6px 0 0;
+    border-radius: 6px;
     margin: 0 4px !important;
-    min-width: 140px !important;            /* ← 최소너비 ⭐ */
+    min-width: 140px !important;
+    height: 55px !important;
+    padding: 0 20px !important;              /* ← 상하 0 ⭐ */
     font-size: 15px;
     font-weight: 700 !important;
-    height: 55px !important;                /* ← 높이 고정 ⭐ */
     line-height: 1 !important;
+    border: none !important;
     border-bottom: 2px solid transparent !important;
+    box-sizing: border-box !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    text-align: center;
-    box-sizing: border-box !important;
     transition: color 0.2s ease, background-color 0.2s ease;
 }
 
+/* ⭐⭐⭐ 탭 내부의 모든 div 중앙 정렬 (핵심!) */
+.stTabs [data-baseweb="tab"] > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    width: 100% !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 6px;                                 /* ← 아이콘-텍스트 간격 */
+}
+
+/* ⭐ 탭 내부의 p 태그 (텍스트) */
+.stTabs [data-baseweb="tab"] p {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* ⭐ 이모지/아이콘 정렬 */
+.stTabs [data-baseweb="tab"] span {
+    display: inline-flex !important;
+    align-items: center !important;
+    line-height: 1 !important;
+}
+
+/* ============ 호버 ============ */
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #2A2E37;
+    color: #FAFAFA;
+}
+
+/* ============ 선택된 탭 - 색상만! ============ */
 .stTabs [aria-selected="true"] {
     background-color: #2A2E37 !important;
     color: #00E5FF !important;
-    font-weight: 700 !important;
     border-bottom: 2px solid #00E5FF !important;
-    /* padding, height 재선언 X ⭐ */
+    /* padding, height, margin 재선언 절대 금지 ⭐ */
 }
 
-
-/* Streamlit 기본 인디케이터 제거 (위치 흔들림 방지) */
+/* ============ 기본 인디케이터 제거 ============ */
 .stTabs [data-baseweb="tab-highlight"] {
-    background-color: transparent !important;
+    display: none !important;
 }
 .stTabs [data-baseweb="tab-border"] {
-    background-color: transparent !important;
+    display: none !important;
 }
     
     .stDataFrame {
