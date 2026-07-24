@@ -532,17 +532,19 @@ with col_right:
                     direction="clockwise",
                     rotation=0,
                 ))
-                fig.update_layout(
-    paper_bgcolor="#0E1117",   # ← 카드 배경과 동일한 회색 ⭐
-    plot_bgcolor="#0E1117",    # ← 카드 배경과 동일한 회색 ⭐
-                    height=345,
-                    margin=dict(l=5, r=5, t=20, b=5),
-                    annotations=[dict(
-                        text=f"<b>{pct}%</b>",
-                        font=dict(size=18, color="white"),
-                        showarrow=False
-                    )],
-                )
+fig.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)",   # ⭐ 완전 투명
+    plot_bgcolor="rgba(0,0,0,0)",    # ⭐ 완전 투명
+    height=345,
+    margin=dict(l=10, r=10, t=25, b=25),   # ⭐ 여백 확보 (잘림 방지)
+    showlegend=False,
+    annotations=[dict(
+        text=f"<b>{pct}%</b>",
+        x=0.5, y=0.5,
+        font=dict(size=18, color="white"),
+        showarrow=False,
+    )],
+)
                 st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
                 st.markdown(
                     f"<div style='text-align:center; margin-top:5px;'>"
