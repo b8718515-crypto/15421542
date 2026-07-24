@@ -91,7 +91,7 @@ st.markdown("""
         padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #00E5FF !important;
+        background-color: #2A2E37 !important;
         color: #1A1D26 !important;
         font-weight: 700;
     }
@@ -432,7 +432,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-ca
     border: 1px solid #262730 !important;   /* ← 얇은 다크 보더 */
     border-radius: 10px !important;
     padding: 20px 25px !important;
-    min-height: 500px;
+    min-height: 560px;
 }
 
 /* 카드 내부의 컬럼 wrapper 배경은 투명 처리 */
