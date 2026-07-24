@@ -92,7 +92,7 @@ st.markdown("""
     background-color: transparent;
     color: #8B92A0;
     border-radius: 6px 6px 0 0;
-    padding: 16px 32px;
+    padding: 16px 32px !important;      /* ← 상하 16px, 좌우 32px로 키움 ⭐ */
     margin: 0 8px !important;      /* ← 이거! 좌우 8px 간격 강제 ⭐ */
     font-size: 15px;
     font-weight: 700;
