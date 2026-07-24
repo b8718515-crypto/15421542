@@ -476,7 +476,7 @@ if len(df_valid) == 0:
 # =========================================================
 st.markdown('<div class="section-header">━━ 전체 요약</div>', unsafe_allow_html=True)
 
-k1, k2, k3 = st.columns(3)
+k1, k2, k3, k4 = st.columns(4)
 with k1:
     render_kpi_card("전체 알람", f"{len(df_valid):,} 건", "", "cyan")
 with k2:
