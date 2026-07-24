@@ -143,8 +143,8 @@ st.markdown("""
 .stTabs [aria-selected="true"]::after {
     content: "";
     position: absolute;
-    left: -6px;                              /* ← 왼쪽으로 확장 */
-    right: -6px;                             /* ← 오른쪽으로 확장 */
+    left: 20px;                              /* ← 왼쪽으로 확장 */
+    right: 20px;                             /* ← 오른쪽으로 확장 */
     bottom: -2px;                            /* ← 위치 미세조정 */
     height: 3px;                             /* ← 두께 */
     background-color: #00E5FF;
