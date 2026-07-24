@@ -84,6 +84,7 @@ st.markdown("""
     padding: 12px;
     border-radius: 10px;
     border: 1px solid #2A2E37;
+    font-weight: 700;              /* ← 동일 */
 }
 
 /* 각 탭에 좌우 margin 강제 적용 */
