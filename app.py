@@ -550,7 +550,7 @@ with col_right:
                 )
                 st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
                 st.markdown(
-                    f"<div style='text-align:center; margin-top:-30px;'>"
+                    f"<div style='text-align:center; margin-top:-35px;'>"
                     f"<span style='color:{color};font-weight:700;font-size:18px;'>{line_label}</span>"
                     f"<br><small style='color:#8B92A0;font-size:11px;'>{row['건수']:,} 건</small>"
                     f"</div>",
