@@ -504,8 +504,8 @@ with col_right:
         # 카드 식별 마커
         st.markdown('<div class="dist-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
-            "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:-10px; margin-top:-15px;'
-            "라인별 비율 (알람 건수 기준)</div>",>"
+            "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:-10px; margin-top:-15px;'>"
+            "라인별 비율 (알람 건수 기준)</div>",
             unsafe_allow_html=True
         )
 
