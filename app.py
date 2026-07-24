@@ -140,11 +140,16 @@ st.markdown("""
     color: #FAFAFA;
 }
 
-/* 선택 탭 */
-.stTabs [aria-selected="true"] {
-    background-color: #2A2E37 !important;
-    color: #00E5FF !important;
-    border-bottom: 2px solid #00E5FF !important;
+.stTabs [aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: -6px;                              /* ← 왼쪽으로 확장 */
+    right: -6px;                             /* ← 오른쪽으로 확장 */
+    bottom: -2px;                            /* ← 위치 미세조정 */
+    height: 3px;                             /* ← 두께 */
+    background-color: #00E5FF;
+    border-radius: 2px;                      /* ← 살짝 둥글게 */
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);  /* ← 글로우 효과 ✨ */
 }
 
 /* 기본 인디케이터 완전 제거 */
