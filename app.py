@@ -471,7 +471,7 @@ with col_left:
             marker=dict(colors=line_dist["색상"].tolist()),
             textinfo="label+percent",
             textposition="inside",
-            textfont=dict(size=12, color="white"),
+            textfont=dict(size=15, color="black"),
             sort=True,
             direction="clockwise",
         ))
