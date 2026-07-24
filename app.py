@@ -90,7 +90,7 @@ st.markdown("""
     background-color: transparent;
     color: #8B92A0;
     border-radius: 6px 6px 0 0;
-    padding: 16px 36px !important;          /* ← 크게 ⭐ */
+    padding: 0 32px !important;            /* ← 좌우만 padding */
     margin: 0 4px !important;
     min-width: 140px !important;            /* ← 최소너비 ⭐ */
     font-size: 15px;
