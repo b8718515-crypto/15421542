@@ -86,13 +86,13 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
-        color: #00E5FF !important; 
+        color: #FAFAFA;
         border-radius: 6px;
         padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
         background-color: #2A2E37 !important;
-        color: #1A1D26 !important;
+        color: #00E5FF !important;  
         font-weight: 700;
     }
     
