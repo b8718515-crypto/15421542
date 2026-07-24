@@ -204,13 +204,14 @@ LINE_COLORS = {
 
 LINE_COLORS_LABEL = {LINE_LABELS[k]: v for k, v in LINE_COLORS.items()}
 
-# ⭐ TAG 앞 2글자 → 라인 매핑
+# ⭐ TAG 앞 3글자 → 라인 매핑
 TAG_PREFIX_TO_LINE = {
-    "RA": "4A",   # 대입경A
-    "RB": "4B",   # 대입경B
-    "RC": "4C",   # 단결정
-    "RX": "4X",   # 열처리
+    "RA4": "4A",   # 4라인 대입경A
+    "RB4": "4B",   # 4라인 대입경B
+    "RC4": "4C",   # 4라인 단결정
+    "RX4": "4X",   # 4라인 열처리
 }
+
 
 
 def apply_dark_theme(fig, height=400):
@@ -292,14 +293,15 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
 # ⭐ 알람 TAG 앞 2글자로 라인 분류
 # =========================================================
 def detect_line(tag: str) -> str:
-    """알람 TAG 앞 2글자로 라인 분류
-    RA = 대입경A (4A) / RB = 대입경B (4B)
-    RC = 단결정 (4C) / RX = 열처리 (4X)
+    """알람 TAG 앞 3글자로 라인 분류
+    RA4 = 4라인 대입경A / RB4 = 4라인 대입경B
+    RC4 = 4라인 단결정 / RX4 = 4라인 열처리
     """
     if not isinstance(tag, str):
         return "미분류"
-    prefix = tag.strip().upper()[:2]
+    prefix = tag.strip().upper()[:3]   # ⭐ [:2] → [:3]
     return TAG_PREFIX_TO_LINE.get(prefix, "미분류")
+
 
 
 def read_file_path(path: Path) -> pd.DataFrame:
