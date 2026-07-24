@@ -525,26 +525,29 @@ with col_right:
                 fig = go.Figure(go.Pie(
                     values=[pct, 100 - pct],
                     hole=0.72,
-                    marker=dict(colors=[color, "#2A2E37"]),
+                    marker=dict(
+                        colors=[color, "#2A2E37"],
+                        line=dict(color="rgba(0,0,0,0)", width=0),
+                    ),
                     showlegend=False,
                     textinfo="none",
+                    hoverinfo="skip",
                     sort=False,
                     direction="clockwise",
                     rotation=0,
                 ))
-fig.update_layout(
-    paper_bgcolor="rgba(0,0,0,0)",   # ⭐ 완전 투명
-    plot_bgcolor="rgba(0,0,0,0)",    # ⭐ 완전 투명
-    height=345,
-    margin=dict(l=10, r=10, t=25, b=25),   # ⭐ 여백 확보 (잘림 방지)
-    showlegend=False,
-    annotations=[dict(
-        text=f"<b>{pct}%</b>",
-        x=0.5, y=0.5,
-        font=dict(size=18, color="white"),
-        showarrow=False,
-    )],
-)
+                fig.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    height=345,
+                    margin=dict(l=10, r=10, t=25, b=25),
+                    annotations=[dict(
+                        text=f"<b>{pct}%</b>",
+                        x=0.5, y=0.5,
+                        font=dict(size=18, color="white"),
+                        showarrow=False,
+                    )],
+                )
                 st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
                 st.markdown(
                     f"<div style='text-align:center; margin-top:5px;'>"
@@ -554,8 +557,6 @@ fig.update_layout(
                     unsafe_allow_html=True
                 )
 
-    # 카드 닫기
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
