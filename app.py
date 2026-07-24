@@ -19,7 +19,7 @@ st.set_page_config(
 
 # =========================================================
 # 🎨 커스텀 CSS
-# =========================================================
+# ===================================================f======
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; }
@@ -455,7 +455,7 @@ with col_left:
         # 카드 식별 마커 (CSS 선택자용)
         st.markdown('<div class="dist-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
-            "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:5px; margin-top:-5px;'>"
+            "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:5px; margin-top:-15px;'>"
             "라인별 알람 분포</div>",
             unsafe_allow_html=True
         )
