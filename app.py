@@ -679,7 +679,7 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
 st.markdown('<div class="section-header">━━ 라인별 상세 분석</div>', unsafe_allow_html=True)
 
 tab_all, tab_4a, tab_4b, tab_4c, tab_4x, tab_cmp = st.tabs(
-    ["    🌐 전체    ", "    🅰️ 4라인 대입경A    ", "    🅱️ 4라인 대입경B    ", "    🅲 4라인 단결정    ", "    ❎ 4라인 열처리    ", "    📊 라인 비교    "]
+    ["  🌐 전체  ", "  🅰️ 4라인 대입경A  ", "  🅱️ 4라인 대입경B  ", "  🅲 4라인 단결정  ", "  ❎ 4라인 열처리  ", "  📊 라인 비교  "]
 )
 
 with tab_all:
