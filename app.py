@@ -78,27 +78,48 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-        background-color: #8B92A0;
-        padding: 5px;
-        border-radius: 8px;
-    }
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    background-color: #1C1F26;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #2A2E37;
+}
+
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #8B92A0;
     border-radius: 6px;
-    padding: 12px 24px;    /* ← 8px 16px → 12px 24px (상하↑ 좌우↑) */
-    font-weight: 500;
-    font-size: 15px;       /* ← 글자 크기도 살짝 키우면 조화 */
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 700;              /* ← 비선택도 700으로 통일 (색만 흐리게) */
+    border-bottom: 2px solid transparent !important;  /* ← 투명 border로 공간 확보 ⭐ */
+    text-align: center;
+    justify-content: center;       /* ← 항상 중앙 정렬 */
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease, background-color 0.2s ease;  /* 크기 변화는 트랜지션 X */
 }
+
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #2A2E37;
+    color: #FAFAFA;
+}
+
 .stTabs [aria-selected="true"] {
     background-color: #2A2E37 !important;
     color: #00E5FF !important;
-    font-weight: 700;
-    border-bottom: 2px solid #00E5FF !important;
-    padding: 12px 24px;    /* ← 동일하게 맞춰야 흔들림 없음 */
-    }
+    font-weight: 700;              /* ← 동일 */
+    border-bottom: 2px solid #00E5FF !important;  /* ← 색만 바꿈, 두께 동일 */
+}
+
+/* Streamlit 기본 인디케이터 제거 (위치 흔들림 방지) */
+.stTabs [data-baseweb="tab-highlight"] {
+    background-color: transparent !important;
+}
+.stTabs [data-baseweb="tab-border"] {
+    background-color: transparent !important;
+}
     
     .stDataFrame {
         background-color: #1C1F26;
