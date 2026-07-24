@@ -18,7 +18,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🎨 커스텀 CSS
+# 🎨 커스텀 CSS  (변경 없음 - 생략 없이 그대로)
 # =========================================================
 st.markdown("""
 <style>
@@ -78,7 +78,6 @@ st.markdown("""
         margin-bottom: 10px;
     }
     
-/* ============ 탭 리스트 (바깥 박스) ============ */
 .stTabs [data-baseweb="tab-list"] {
     gap: 16px;
     background-color: #1C1F26;
@@ -91,7 +90,6 @@ st.markdown("""
     min-height: 75px !important;
 }
 
-/* ============ 탭 버튼 ============ */
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #8B92A0;
@@ -213,7 +211,6 @@ TAG_PREFIX_TO_LINE = {
 }
 
 
-
 def apply_dark_theme(fig, height=400):
     fig.update_layout(
         template="plotly_dark",
@@ -290,7 +287,7 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
 
 
 # =========================================================
-# ⭐ 알람 TAG 앞 2글자로 라인 분류
+# ⭐ 알람 TAG 앞 3글자로 라인 분류
 # =========================================================
 def detect_line(tag: str) -> str:
     """알람 TAG 앞 3글자로 라인 분류
@@ -299,9 +296,8 @@ def detect_line(tag: str) -> str:
     """
     if not isinstance(tag, str):
         return "미분류"
-    prefix = tag.strip().upper()[:3]   # ⭐ [:2] → [:3]
+    prefix = tag.strip().upper()[:3]
     return TAG_PREFIX_TO_LINE.get(prefix, "미분류")
-
 
 
 def read_file_path(path: Path) -> pd.DataFrame:
@@ -373,8 +369,7 @@ def get_file_signatures():
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
     st.caption("업로드한 파일은 **서버에 저장**되어 모든 사용자가 함께 봅니다.")
-    st.caption("💡 알람 TAG 앞 3글자(**RA4/RB4/RC4/RX4**)로 라인이 자동 분류됩니다.")
-
+    st.caption("💡 알람 TAG(**J열**) 앞 3글자(**RA4/RB4/RC4/RX4**)로 라인이 자동 분류됩니다.")
 
     new_files = st.file_uploader(
         "파일 업로드",
@@ -451,31 +446,54 @@ if not signatures:
 df_raw = load_all_files(signatures)
 
 # =========================================================
-# 컬럼 자동 감지
+# ⭐ 컬럼 지정 (J열 = TAG, 시간 컬럼은 자동 감지)
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
+# ⭐ J열(index=9)을 알람 TAG 컬럼으로 강제 지정
+if len(cols) < 10:
+    st.error(f"❌ 파일에 컬럼이 {len(cols)}개밖에 없습니다. J열(10번째)이 필요합니다.")
+    st.write("**현재 컬럼 목록:**", cols)
+    st.stop()
+
+col_tag = cols[9]                 # ⭐ J열 = 알람 TAG (라인 분류용)
+
+# 알람 설명(화면 표시용) 컬럼 자동 감지 - 있으면 사용, 없으면 TAG로 대체
 def _guess(keywords, default=None):
     for c in cols:
         for k in keywords:
             if k in str(c):
                 return c
-    return default if default is not None else (cols[0] if cols else None)
+    return default
 
-col_alarm = _guess(["알람", "Alarm", "MSG", "메시지", "TAG", "Tag", "tag"])
-col_start = _guess(["발생", "시작", "Start", "On"])
+col_alarm_desc = _guess(["알람", "Alarm", "MSG", "메시지", "설명"], default=col_tag)
+col_start = _guess(["발생", "시작", "Start", "On"], default=cols[0])
+
+# 사이드바에 현재 사용 중인 컬럼 표시 (디버깅용)
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("#### 🔍 컬럼 매핑")
+    st.caption(f"**TAG(J열):** `{col_tag}`")
+    st.caption(f"**알람설명:** `{col_alarm_desc}`")
+    st.caption(f"**발생시간:** `{col_start}`")
 
 # =========================================================
 # 데이터 정제
 # =========================================================
-df = df_raw[[col_alarm, col_start, "_파일명"]].copy()
-df.columns = ["알람명", "발생시간", "파일명"]
-df["라인"] = df["알람명"].apply(detect_line)   # ⭐ 알람명(TAG) 앞 2글자로 분류
+df = df_raw[[col_tag, col_alarm_desc, col_start, "_파일명"]].copy()
+df.columns = ["TAG", "알람명", "발생시간", "파일명"]
+
+# ⭐ TAG(J열) 기반으로 라인 분류
+df["라인"] = df["TAG"].apply(detect_line)
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 
-# 알람명이 있는 행만 유효 데이터로 사용
-df_valid = df.dropna(subset=["알람명"]).copy()
-df_valid = df_valid[df_valid["알람명"].astype(str).str.strip() != ""]
+# TAG가 있는 행만 유효 데이터로 사용
+df_valid = df.dropna(subset=["TAG"]).copy()
+df_valid = df_valid[df_valid["TAG"].astype(str).str.strip() != ""]
+
+# 알람명이 비어있으면 TAG로 채움
+df_valid["알람명"] = df_valid["알람명"].fillna(df_valid["TAG"])
+df_valid.loc[df_valid["알람명"].astype(str).str.strip() == "", "알람명"] = df_valid["TAG"]
 
 if len(df_valid) == 0:
     st.error("유효한 알람 데이터가 없습니다.")
@@ -484,11 +502,11 @@ if len(df_valid) == 0:
 # ⭐ 미분류 알람 확인
 unclassified = df_valid[df_valid["라인"] == "미분류"]
 if len(unclassified) > 0:
-    with st.expander(f"⚠️ 미분류 알람 {len(unclassified):,}건 (앞 2글자가 RA/RB/RC/RX 아님)"):
+    with st.expander(f"⚠️ 미분류 알람 {len(unclassified):,}건 (TAG 앞 3글자가 RA4/RB4/RC4/RX4 아님)"):
         st.dataframe(
-            unclassified["알람명"].value_counts().reset_index().rename(
-                columns={"index": "알람명", "count": "건수"}
-            ),
+            unclassified.groupby(["TAG", "알람명"]).size()
+                        .reset_index(name="건수")
+                        .sort_values("건수", ascending=False),
             use_container_width=True,
         )
 
@@ -504,7 +522,9 @@ with k1:
 with k2:
     render_kpi_card("고유 알람", f"{df_valid['알람명'].nunique():,} 종", "", "green")
 with k3:
-    render_kpi_card("활성 라인", f"{df_valid['라인'].nunique()} 개", "", "purple")
+    # 미분류 제외 활성 라인 수
+    active_lines = df_valid[df_valid["라인"] != "미분류"]["라인"].nunique()
+    render_kpi_card("활성 라인", f"{active_lines} 개", "", "purple")
 
 
 # =========================================================
@@ -520,14 +540,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-ca
     border-radius: 10px !important;
     padding: 20px 25px !important;
     min-height: 560px;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) 
-    background-color: #1A1D26 !important;
-    border: 1px solid #2A2E3A !important;
-    border-radius: 10px !important;
-    padding: 20px 25px !important;
-    min-height: auto;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -597,7 +609,6 @@ with col_right:
         line_order = ["4A", "4B", "4C", "4X"]
         line_summary["_order"] = line_summary["라인"].map({v: i for i, v in enumerate(line_order)})
         line_summary = line_summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
-        # 미분류는 미니 도넛에서 제외 (원한다면 line_order에 "미분류" 추가)
         line_summary = line_summary[line_summary["라인"].isin(line_order)].reset_index(drop=True)
         total = line_summary["건수"].sum() if len(line_summary) > 0 else 1
 
@@ -643,6 +654,8 @@ with col_right:
                         f"</div>",
                         unsafe_allow_html=True
                     )
+        else:
+            st.info("분류된 라인 데이터가 없습니다. TAG 앞 3글자를 확인해주세요.")
 
 
 # =========================================================
