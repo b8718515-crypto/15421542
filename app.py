@@ -552,7 +552,7 @@ with col_right:
                 st.markdown(
                     f"<div style='text-align:center; margin-top:-35px;'>"
                     f"<span style='color:{color};font-weight:700;font-size:18px;'>{line_label}</span>"
-                    f"<br><small style='color:#8B92A0;font-size:15px;'>{row['건수']:,} 건</small>"
+                    f"<br><span style='color:#8B92A0;font-size:18px;'>{row['건수']:,} 건</span>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
