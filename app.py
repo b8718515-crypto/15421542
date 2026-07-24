@@ -654,6 +654,8 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     with b:
         render_kpi_card("고유 알람", f"{data['알람명'].nunique():,} 종", "", "green")
 
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    
     st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
     st.dataframe(
         top_df[["알람명", "발생빈도", "비율(%)"]],
