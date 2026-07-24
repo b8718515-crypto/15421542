@@ -84,17 +84,20 @@ st.markdown("""
         padding: 5px;
         border-radius: 8px;
     }
-    .stTabs [data-baseweb="tab"] {
-        background-color: transparent;
-        color: #FAFAFA;
-        border-radius: 6px;
-        padding: 12px 24px;    /* ← 8px 16px → 12px 24px (상하↑ 좌우↑) */
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #2A2E37 !important;
-        color: #00E5FF !important;  
-        font-weight: 700;
-        padding: 12px 24px;    /* ← 동일하게 맞춰야 흔들림 없음 */
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent;
+    color: #8B92A0;
+    border-radius: 6px;
+    padding: 12px 24px;    /* ← 8px 16px → 12px 24px (상하↑ 좌우↑) */
+    font-weight: 500;
+    font-size: 15px;       /* ← 글자 크기도 살짝 키우면 조화 */
+}
+.stTabs [aria-selected="true"] {
+    background-color: #2A2E37 !important;
+    color: #00E5FF !important;
+    font-weight: 700;
+    border-bottom: 2px solid #00E5FF !important;
+    padding: 12px 24px;    /* ← 동일하게 맞춰야 흔들림 없음 */
     }
     
     .stDataFrame {
