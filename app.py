@@ -143,8 +143,8 @@ st.markdown("""
 .stTabs [aria-selected="true"]::after {
     content: "";
     position: absolute;
-    left: 20px;                              /* ← 왼쪽으로 확장 */
-    right: 20px;                             /* ← 오른쪽으로 확장 */
+    left: -6px;                              /* ← 왼쪽으로 확장 */
+    right: -6px;                             /* ← 오른쪽으로 확장 */
     bottom: -2px;                            /* ← 위치 미세조정 */
     height: 3px;                             /* ← 두께 */
     background-color: #00E5FF;
@@ -648,7 +648,7 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     top_df = agg.head(top_n).copy()
     top_df.index = top_df.index + 1
 
-    a, b = st.columns(2)
+    a, b, c, d = st.columns(4)
     with a:
         render_kpi_card("알람 건수", f"{len(data):,} 건", "", "cyan")
     with b:
