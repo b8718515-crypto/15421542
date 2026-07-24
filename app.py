@@ -373,7 +373,8 @@ def get_file_signatures():
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
     st.caption("업로드한 파일은 **서버에 저장**되어 모든 사용자가 함께 봅니다.")
-    st.caption("💡 알람 TAG 앞 2글자(**RA/RB/RC/RX**)로 라인이 자동 분류됩니다.")
+    st.caption("💡 알람 TAG 앞 3글자(**RA4/RB4/RC4/RX4**)로 라인이 자동 분류됩니다.")
+
 
     new_files = st.file_uploader(
         "파일 업로드",
