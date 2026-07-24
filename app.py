@@ -88,7 +88,7 @@ st.markdown("""
         background-color: transparent;
         color: #FAFAFA;
         border-radius: 6px;
-        padding: 8px 16px;
+        padding: 12px 24px;    /* ← 8px 16px → 12px 24px (상하↑ 좌우↑) */
     }
     .stTabs [aria-selected="true"] {
         background-color: #2A2E37 !important;
