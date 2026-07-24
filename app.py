@@ -107,14 +107,12 @@ st.markdown("""
     color: #FAFAFA;
 }
 
-/* 선택된 탭의 음영 크기 키우기 */
 .stTabs [aria-selected="true"] {
     background-color: #2A2E37 !important;
     color: #00E5FF !important;
+    font-weight: 700;              /* ← 동일 */
+    border-bottom: 2px solid #00E5FF !important;  /* ← 색만 바꿈, 두께 동일 */
     padding: 16px 32px !important;      /* ← 상하 16px, 좌우 32px로 키움 ⭐ */
-    border-radius: 8px !important;      /* ← 모서리 둥글게 */
-    border: 2px solid #00E5FF !important;
-    font-weight: 700 !important;
 }
 
 
