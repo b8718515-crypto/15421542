@@ -79,41 +79,39 @@ st.markdown("""
     }
     
 .stTabs [data-baseweb="tab-list"] {
-    gap: 12px;
+    gap: 16px;                              /* 탭 간격 */
     background-color: #1C1F26;
     padding: 12px;
     border-radius: 10px;
     border: 1px solid #2A2E37;
-    font-weight: 700;              /* ← 동일 */
 }
 
-/* 각 탭에 좌우 margin 강제 적용 */
 .stTabs [data-baseweb="tab"] {
     background-color: transparent;
     color: #8B92A0;
     border-radius: 6px 6px 0 0;
-    padding: 16px 32px !important;      /* ← 상하 16px, 좌우 32px로 키움 ⭐ */
-    margin: 0 8px !important;      /* ← 이거! 좌우 8px 간격 강제 ⭐ */
+    padding: 16px 36px !important;          /* ← 크게 ⭐ */
+    margin: 0 4px !important;
+    min-width: 140px !important;            /* ← 최소너비 ⭐ */
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 700 !important;
+    height: 55px !important;                /* ← 높이 고정 ⭐ */
+    line-height: 1 !important;
     border-bottom: 2px solid transparent !important;
-    justify-content: center;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     text-align: center;
+    box-sizing: border-box !important;
     transition: color 0.2s ease, background-color 0.2s ease;
-}
-
-
-.stTabs [data-baseweb="tab"]:hover {
-    background-color: #2A2E37;
-    color: #FAFAFA;
 }
 
 .stTabs [aria-selected="true"] {
     background-color: #2A2E37 !important;
     color: #00E5FF !important;
-    font-weight: 700;              /* ← 동일 */
-    border-bottom: 2px solid #00E5FF !important;  /* ← 색만 바꿈, 두께 동일 */
-    padding: 16px 32px !important;      /* ← 상하 16px, 좌우 32px로 키움 ⭐ */
+    font-weight: 700 !important;
+    border-bottom: 2px solid #00E5FF !important;
+    /* padding, height 재선언 X ⭐ */
 }
 
 
