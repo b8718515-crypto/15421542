@@ -92,7 +92,7 @@ st.markdown("""
     border-radius: 6px 6px 0 0;
     padding: 16px 36px !important;          /* ← 크게 ⭐ */
     margin: 0 4px !important;
-    min-width: 140px !important;            /* ← 최소너비 ⭐ */
+    min-width: 180px !important;            /* ← 최소너비 ⭐ */
     font-size: 15px;
     font-weight: 700 !important;
     height: 55px !important;                /* ← 높이 고정 ⭐ */
@@ -112,6 +112,7 @@ st.markdown("""
     font-weight: 700 !important;
     border-bottom: 2px solid #00E5FF !important;
     /* padding, height 재선언 X ⭐ */
+    min-width: 180px !important;            /* ← 최소너비 ⭐ */
 }
 
 
