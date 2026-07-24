@@ -82,11 +82,26 @@ st.markdown("""
 .stTabs [data-baseweb="tab-list"] {
     gap: 16px;
     background-color: #1C1F26;
-    padding: 12px;
+    padding: 8px 12px !important;           /* ← 상하 패딩 균등 ⭐ */
     border-radius: 10px;
     border: 1px solid #2A2E37;
-    align-items: center !important;         /* ← 리스트도 중앙 */
+    display: flex !important;
+    align-items: center !important;          /* ← 세로 중앙 ⭐ */
+    justify-content: flex-start !important;
+    min-height: 75px !important;             /* ← 탭높이(55) + 상하패딩(8+8) ⭐ */
 }
+
+/* ⭐ stTabs 전체 컨테이너의 하단 공간 제거 */
+.stTabs {
+    margin-bottom: 0 !important;
+}
+
+/* ⭐ tab-list 아래에 생기는 border/margin 제거 */
+.stTabs [data-baseweb="tab-list"]::after,
+.stTabs [data-baseweb="tab-list"]::before {
+    display: none !important;
+}
+
 
 /* ============ 탭 버튼 (바깥) ============ */
 .stTabs [data-baseweb="tab"] {
