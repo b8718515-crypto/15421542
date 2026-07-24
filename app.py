@@ -106,6 +106,7 @@ st.markdown("""
 .stTabs [data-baseweb="tab"]:hover {
     background-color: #2A2E37;
     color: #FAFAFA;
+    padding: 16px 32px !important;      /* ← 상하 16px, 좌우 32px로 키움 ⭐ */
 }
 
 .stTabs [aria-selected="true"] {
