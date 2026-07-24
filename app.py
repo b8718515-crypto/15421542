@@ -19,7 +19,7 @@ st.set_page_config(
 
 # =========================================================
 # 🎨 커스텀 CSS
-# ===================================================f======
+# =========================================================
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; }
@@ -112,7 +112,6 @@ st.markdown("""
     transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-/* ⭐ 탭 내부 div 중앙 정렬 */
 .stTabs [data-baseweb="tab"] > div {
     display: flex !important;
     align-items: center !important;
@@ -125,7 +124,6 @@ st.markdown("""
     gap: 6px;
 }
 
-/* ⭐ 텍스트 p 태그 */
 .stTabs [data-baseweb="tab"] p {
     margin: 0 !important;
     padding: 0 !important;
@@ -134,7 +132,6 @@ st.markdown("""
     font-weight: 700 !important;
 }
 
-/* 호버 */
 .stTabs [data-baseweb="tab"]:hover {
     background-color: #2A2E37;
     color: #FAFAFA;
@@ -143,16 +140,15 @@ st.markdown("""
 .stTabs [aria-selected="true"]::after {
     content: "";
     position: absolute;
-    left: -6px;                              /* ← 왼쪽으로 확장 */
-    right: -6px;                             /* ← 오른쪽으로 확장 */
-    bottom: -2px;                            /* ← 위치 미세조정 */
-    height: 3px;                             /* ← 두께 */
+    left: -6px;
+    right: -6px;
+    bottom: -2px;
+    height: 3px;
     background-color: #00E5FF;
-    border-radius: 2px;                      /* ← 살짝 둥글게 */
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);  /* ← 글로우 효과 ✨ */
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
 }
 
-/* 기본 인디케이터 완전 제거 */
 .stTabs [data-baseweb="tab-highlight"] {
     display: none !important;
     height: 0 !important;
@@ -162,7 +158,6 @@ st.markdown("""
     height: 0 !important;
 }
 
-    
     .stDataFrame {
         background-color: #1C1F26;
         border-radius: 8px;
@@ -208,6 +203,14 @@ LINE_COLORS = {
 }
 
 LINE_COLORS_LABEL = {LINE_LABELS[k]: v for k, v in LINE_COLORS.items()}
+
+# ⭐ TAG 앞 2글자 → 라인 매핑
+TAG_PREFIX_TO_LINE = {
+    "RA": "4A",   # 대입경A
+    "RB": "4B",   # 대입경B
+    "RC": "4C",   # 단결정
+    "RX": "4X",   # 열처리
+}
 
 
 def apply_dark_theme(fig, height=400):
@@ -285,14 +288,18 @@ def robust_to_datetime(series: pd.Series) -> pd.Series:
     return pd.to_datetime(pd.Series([None] * len(s)), errors="coerce")
 
 
-def detect_line(text: str) -> str:
-    if not isinstance(text, str):
+# =========================================================
+# ⭐ 알람 TAG 앞 2글자로 라인 분류
+# =========================================================
+def detect_line(tag: str) -> str:
+    """알람 TAG 앞 2글자로 라인 분류
+    RA = 대입경A (4A) / RB = 대입경B (4B)
+    RC = 단결정 (4C) / RX = 열처리 (4X)
+    """
+    if not isinstance(tag, str):
         return "미분류"
-    t = text.upper()
-    for ln in LINES:
-        if re.search(rf"4[\s_\-]*{ln[1]}", t):
-            return ln
-    return "미분류"
+    prefix = tag.strip().upper()[:2]
+    return TAG_PREFIX_TO_LINE.get(prefix, "미분류")
 
 
 def read_file_path(path: Path) -> pd.DataFrame:
@@ -359,14 +366,15 @@ def get_file_signatures():
 
 
 # =========================================================
-# 사이드바 (가중치 슬라이더 제거)
+# 사이드바
 # =========================================================
 with st.sidebar:
     st.markdown("### 📂 공유 파일 관리")
     st.caption("업로드한 파일은 **서버에 저장**되어 모든 사용자가 함께 봅니다.")
+    st.caption("💡 알람 TAG 앞 2글자(**RA/RB/RC/RX**)로 라인이 자동 분류됩니다.")
 
     new_files = st.file_uploader(
-        "파일 업로드 (여러 개 가능)",
+        "파일 업로드",
         type=["xlsx", "xls", "csv"],
         accept_multiple_files=True,
         key="uploader",
@@ -440,7 +448,7 @@ if not signatures:
 df_raw = load_all_files(signatures)
 
 # =========================================================
-# 컬럼 자동 감지 (지속시간 불필요 → 알람명/발생시간만 있어도 OK)
+# 컬럼 자동 감지
 # =========================================================
 cols = [c for c in df_raw.columns.tolist() if c != "_파일명"]
 
@@ -451,7 +459,7 @@ def _guess(keywords, default=None):
                 return c
     return default if default is not None else (cols[0] if cols else None)
 
-col_alarm = _guess(["알람", "Alarm", "MSG", "메시지"])
+col_alarm = _guess(["알람", "Alarm", "MSG", "메시지", "TAG", "Tag", "tag"])
 col_start = _guess(["발생", "시작", "Start", "On"])
 
 # =========================================================
@@ -459,7 +467,7 @@ col_start = _guess(["발생", "시작", "Start", "On"])
 # =========================================================
 df = df_raw[[col_alarm, col_start, "_파일명"]].copy()
 df.columns = ["알람명", "발생시간", "파일명"]
-df["라인"] = df["파일명"].apply(detect_line)
+df["라인"] = df["알람명"].apply(detect_line)   # ⭐ 알람명(TAG) 앞 2글자로 분류
 df["발생시간"] = robust_to_datetime(df["발생시간"])
 
 # 알람명이 있는 행만 유효 데이터로 사용
@@ -470,9 +478,20 @@ if len(df_valid) == 0:
     st.error("유효한 알람 데이터가 없습니다.")
     st.stop()
 
+# ⭐ 미분류 알람 확인
+unclassified = df_valid[df_valid["라인"] == "미분류"]
+if len(unclassified) > 0:
+    with st.expander(f"⚠️ 미분류 알람 {len(unclassified):,}건 (앞 2글자가 RA/RB/RC/RX 아님)"):
+        st.dataframe(
+            unclassified["알람명"].value_counts().reset_index().rename(
+                columns={"index": "알람명", "count": "건수"}
+            ),
+            use_container_width=True,
+        )
+
 
 # =========================================================
-# 🎯 상단 KPI 카드 (3개)
+# 🎯 상단 KPI 카드
 # =========================================================
 st.markdown('<div class="section-header">━━ 전체 요약</div>', unsafe_allow_html=True)
 
@@ -490,22 +509,19 @@ with k3:
 # =========================================================
 st.markdown('<div class="section-header">━━ 라인별 분포</div>', unsafe_allow_html=True)
 
-# ===== 라인별 분포 카드 스타일 (전체 요약 카드와 동일 톤) =====
 st.markdown("""
 <style>
-/* 마커가 포함된 컨테이너 = 라인별 분포 카드 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) {
-    background-color: #1A1D26 !important;   /* ← 전체 요약과 동일 (Streamlit 기본 배경) */
-    border: 1px solid #262730 !important;   /* ← 얇은 다크 보더 */
+    background-color: #1A1D26 !important;
+    border: 1px solid #262730 !important;
     border-radius: 10px !important;
     padding: 20px 25px !important;
     min-height: 560px;
 }
 
-/* 카드 내부의 컬럼 wrapper 배경은 투명 처리 */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div > div > .dist-card-marker) 
-    background-color: #1A1D26 !important;   /* ← 회색빛 네이비로 변경 ⭐ */
-    border: 1px solid #2A2E3A !important;   /* ← 테두리도 살짝 밝게 */
+    background-color: #1A1D26 !important;
+    border: 1px solid #2A2E3A !important;
     border-radius: 10px !important;
     padding: 20px 25px !important;
     min-height: auto;
@@ -519,7 +535,6 @@ col_left, col_right = st.columns(2)
 # ---------- 왼쪽: 라인별 알람 분포 ----------
 with col_left:
     with st.container(border=True):
-        # 카드 식별 마커 (CSS 선택자용)
         st.markdown('<div class="dist-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
             "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:5px; margin-top:-15px;'>"
@@ -568,7 +583,6 @@ with col_left:
 # ---------- 오른쪽: 라인별 비율 ----------
 with col_right:
     with st.container(border=True):
-        # 카드 식별 마커
         st.markdown('<div class="dist-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
             "<div style='color:#FAFAFA; font-size:16px; font-weight:700; margin-bottom:-10px; margin-top:-20px;'>"
@@ -580,50 +594,52 @@ with col_right:
         line_order = ["4A", "4B", "4C", "4X"]
         line_summary["_order"] = line_summary["라인"].map({v: i for i, v in enumerate(line_order)})
         line_summary = line_summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
-        total = line_summary["건수"].sum()
+        # 미분류는 미니 도넛에서 제외 (원한다면 line_order에 "미분류" 추가)
+        line_summary = line_summary[line_summary["라인"].isin(line_order)].reset_index(drop=True)
+        total = line_summary["건수"].sum() if len(line_summary) > 0 else 1
 
-        donut_cols = st.columns(len(line_summary))
-        for dcol, (_, row) in zip(donut_cols, line_summary.iterrows()):
-            with dcol:
-                pct = round(row["건수"] / total * 100, 1)
-                color = LINE_COLORS.get(row["라인"], "#8B92A0")
-                line_label = LINE_LABELS.get(row["라인"], row["라인"])
+        if len(line_summary) > 0:
+            donut_cols = st.columns(len(line_summary))
+            for dcol, (_, row) in zip(donut_cols, line_summary.iterrows()):
+                with dcol:
+                    pct = round(row["건수"] / total * 100, 1)
+                    color = LINE_COLORS.get(row["라인"], "#8B92A0")
+                    line_label = LINE_LABELS.get(row["라인"], row["라인"])
 
-                fig = go.Figure(go.Pie(
-                    values=[pct, 100 - pct],
-                    hole=0.72,
-                    marker=dict(
-                        colors=[color, "#2A2E37"],
-                        line=dict(color="rgba(0,0,0,0)", width=0),
-                    ),
-                    showlegend=False,
-                    textinfo="none",
-                    hoverinfo="skip",
-                    sort=False,
-                    direction="clockwise",
-                    rotation=0,
-                ))
-                fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    height=345,
-                    margin=dict(l=10, r=10, t=25, b=25),
-                    annotations=[dict(
-                        text=f"<b>{pct}%</b>",
-                        x=0.5, y=0.5,
-                        font=dict(size=18, color="white"),
-                        showarrow=False,
-                    )],
-                )
-                st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
-                st.markdown(
-                    f"<div style='text-align:center; margin-top:-35px;'>"
-                    f"<span style='color:{color};font-weight:700;font-size:18px;'>{line_label}</span>"
-                    f"<br><span style='color:#8B92A0;font-size:18px;'>{row['건수']:,} 건</span>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
+                    fig = go.Figure(go.Pie(
+                        values=[pct, 100 - pct],
+                        hole=0.72,
+                        marker=dict(
+                            colors=[color, "#2A2E37"],
+                            line=dict(color="rgba(0,0,0,0)", width=0),
+                        ),
+                        showlegend=False,
+                        textinfo="none",
+                        hoverinfo="skip",
+                        sort=False,
+                        direction="clockwise",
+                        rotation=0,
+                    ))
+                    fig.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        height=345,
+                        margin=dict(l=10, r=10, t=25, b=25),
+                        annotations=[dict(
+                            text=f"<b>{pct}%</b>",
+                            x=0.5, y=0.5,
+                            font=dict(size=18, color="white"),
+                            showarrow=False,
+                        )],
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key=f"mini_donut_{row['라인']}")
+                    st.markdown(
+                        f"<div style='text-align:center; margin-top:-35px;'>"
+                        f"<span style='color:{color};font-weight:700;font-size:18px;'>{line_label}</span>"
+                        f"<br><span style='color:#8B92A0;font-size:18px;'>{row['건수']:,} 건</span>"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
 
 
 # =========================================================
@@ -658,7 +674,6 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
     
     st.markdown(f"#### 🏆 {title} - 발생빈도 TOP {top_n}")
     
-    # ⭐ 컬럼으로 감싸서 폭 제한 (60%만 사용)
     tbl_col, _ = st.columns([6, 4])
     with tbl_col:
         st.dataframe(
@@ -670,8 +685,6 @@ def render_top(title: str, data: pd.DataFrame, key_prefix: str, accent_color="#0
             },
         )
 
-
-    # 발생빈도 막대 차트
     fig = px.bar(top_df.sort_values("발생빈도"),
                  x="발생빈도", y="알람명", orientation="h",
                  text="발생빈도",
